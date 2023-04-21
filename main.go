@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fanc-api/src/models"
+	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -24,7 +27,7 @@ func main() {
 	var err error
 
 	for i := 0; i < 10; i++ {
-		db, err = gorm.Open("mysql", "username:password@tcp(mysql:3306)/dbname?charset=utf8&parseTime=True&loc=Local")
+		db, err = gorm.Open("mysql", "fanc_user:fanc_password@tcp(mysql:3306)/fanc?charset=utf8&parseTime=True&loc=Local")
 		if err == nil {
 			break
 		}
@@ -32,10 +35,13 @@ func main() {
 		time.Sleep(5 * time.Second)
 	}
 
-	if err != nil {
-		e.Logger.Fatal(err)
+	// マイグレーション
+	result := db.AutoMigrate(&models.Staff{})
+	if result.Error != nil {
+		log.Fatalf("Failed to auto migrate: %v", err)
+	} else {
+		fmt.Println("Migration succeeded")
 	}
-	defer db.Close()
 
 	e.GET("/api", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{

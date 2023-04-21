@@ -12,9 +12,9 @@ services:
     image: mysql:8.0
     environment:
       MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_DATABASE: dbname
-      MYSQL_USER: username
-      MYSQL_PASSWORD: password
+      MYSQL_DATABASE: fanc
+      MYSQL_USER: fanc_user
+      MYSQL_PASSWORD: fanc_password
     volumes:
       - mysql-data:/var/lib/mysql
 
