@@ -37,6 +37,14 @@ func main() {
 	}
 	defer db.Close()
 
+	// マイグレーションの実行
+	err = RemoveMailColumnFromStaffTable(db)
+	if err != nil {
+		fmt.Printf("カラムの削除に失敗しました: %v\n", err)
+	} else {
+		fmt.Println("カラムの削除が正常に実行されました")
+	}
+
 	e.GET("/api", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{
 			"message": "Hello from API!",
@@ -44,4 +52,13 @@ func main() {
 	})
 
 	e.Start(":8080")
+}
+
+// staffsテーブルからmailカラムを削除
+func RemoveMailColumnFromStaffTable(db *gorm.DB) error {
+	err := db.Exec("ALTER TABLE staffs DROP COLUMN mail").Error
+	if err != nil {
+		return err
+	}
+	return nil
 }
