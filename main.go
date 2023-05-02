@@ -1,9 +1,10 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
 	"time"
+
+	"fanc-api/src/handlers"
+	"fanc-api/src/routes"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
@@ -25,7 +26,7 @@ func main() {
 	var err error
 
 	for i := 0; i < 10; i++ {
-		db, err = gorm.Open("mysql", "username:password@tcp(mysql:3306)/dbname?charset=utf8&parseTime=True&loc=Local")
+		db, err = gorm.Open("mysql", "root:root_password@tcp(mysql:3306)/fanc?charset=utf8&parseTime=True&loc=Local")
 		if err == nil {
 			break
 		}
@@ -38,28 +39,8 @@ func main() {
 	}
 	defer db.Close()
 
-	// マイグレーションの実行
-	err = RemoveMailColumnFromStaffTable(db)
-	if err != nil {
-		fmt.Printf("カラムの削除に失敗しました: %v\n", err)
-	} else {
-		fmt.Println("カラムの削除が正常に実行されました")
-	}
-
-	e.GET("/api", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, map[string]string{
-			"message": "Hello from API!",
-		})
-	})
+	staffHandler := handlers.NewStaffHandler(db)
+	routes.SetupRoutes(e, staffHandler)
 
 	e.Start(":8080")
-}
-
-// staffsテーブルからmailカラムを削除
-func RemoveMailColumnFromStaffTable(db *gorm.DB) error {
-	err := db.Exec("ALTER TABLE staffs DROP COLUMN mail").Error
-	if err != nil {
-		return err
-	}
-	return nil
 }
