@@ -17,6 +17,18 @@ func NewStaffHandler(db *gorm.DB) *StaffHandler {
 	return &StaffHandler{db}
 }
 
+func (h *StaffHandler) GetStaffs(c echo.Context) error {
+	staffs := []models.Staff{}
+
+	if err := h.db.Find(&staffs).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Failed to retrieve staffs",
+		})
+	}
+
+	return c.JSON(http.StatusOK, staffs)
+}
+
 func (h *StaffHandler) CreateStaff(c echo.Context) error {
 	staff := new(models.Staff)
 
