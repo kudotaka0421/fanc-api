@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"os"
 	"time"
 
 	"fanc-api/src/handlers"
@@ -25,8 +27,14 @@ func main() {
 	var db *gorm.DB
 	var err error
 
+	// connectionString := fmt.Sprintf("%s:%s@tcp(mysql:3306)/fanc?charset=utf8&parseTime=True&loc=Local", dbUser, dbPassword)
+
+	mysqlUser := os.Getenv("MYSQL_USER")
+	mysqlPassword := os.Getenv("MYSQL_PASSWORD")
+	mysqlDataBase := os.Getenv("MYSQL_DATABASE")
+	connectionString := fmt.Sprintf("%s:%s@tcp(mysql:3306)/%s?charset=utf8&parseTime=True&loc=Local", mysqlUser, mysqlPassword, mysqlDataBase)
 	for i := 0; i < 10; i++ {
-		db, err = gorm.Open("mysql", "root:root_password@tcp(mysql:3306)/fanc?charset=utf8&parseTime=True&loc=Local")
+		db, err = gorm.Open("mysql", connectionString)
 		if err == nil {
 			break
 		}
