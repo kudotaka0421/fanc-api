@@ -5,11 +5,19 @@ services:
     build: .
     ports:
       - "8080:8080"
+      # // APIサーバーからMySQLコンテナに接続する際に使用するための環境変数
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: fanc
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root_password
     depends_on:
       - mysql
 
   mysql:
     image: mysql:8.0
+    # ↓これらの環境変数は、コンテナ起動時に使用する。
+    # dockerimageですでに指定された環境定数名なので、カスタマイズはできない
     environment:
       MYSQL_ROOT_PASSWORD: root_password
       MYSQL_DATABASE: fanc
