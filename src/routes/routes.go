@@ -9,4 +9,5 @@ import (
 func SetupRoutes(e *echo.Echo, staffHandler *handlers.StaffHandler) {
 	e.POST("/api/staff", staffHandler.CreateStaff)
 	e.GET("/api/staff", staffHandler.GetStaffs)
+	e.GET("/api/staff/:staff_id", staffHandler.GetStaffByID) // 追加
 }
