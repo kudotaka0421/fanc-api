@@ -29,6 +29,32 @@ func (h *StaffHandler) GetStaffs(c echo.Context) error {
 	return c.JSON(http.StatusOK, staffs)
 }
 
+func (h *StaffHandler) GetStaffByID(c echo.Context) error {
+	staffID := c.Param("staff_id")
+	staff := new(models.Staff)
+
+	if err := h.db.Select("id, first_name, last_name, first_name_kana, last_name_kana, email").Where("id = ?", staffID).First(&staff).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return c.JSON(http.StatusNotFound, map[string]string{
+				"message": "Staff not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Failed to retrieve staff",
+		})
+	}
+	response := map[string]interface{}{
+		"id":            staff.ID,
+		"firstName":     staff.FirstName,
+		"lastName":      staff.LastName,
+		"firstNameKana": staff.FirstNameKana,
+		"lastNameKana":  staff.LastNameKana,
+		"email":         staff.Email,
+	}
+
+	return c.JSON(http.StatusOK, response)
+}
+
 func (h *StaffHandler) CreateStaff(c echo.Context) error {
 	staff := new(models.Staff)
 
