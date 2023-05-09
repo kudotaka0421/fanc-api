@@ -11,4 +11,6 @@ func SetupRoutes(e *echo.Echo, staffHandler *handlers.StaffHandler) {
 	e.GET("/api/staff", staffHandler.GetStaffs)
 	e.GET("/api/staff/:staff_id", staffHandler.GetStaffByID)
 	e.PUT("/api/staff/:staff_id", staffHandler.UpdateStaff)
+	e.DELETE("/api/staff/:staff_id", staffHandler.DeleteStaff)
+
 }

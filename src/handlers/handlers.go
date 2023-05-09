@@ -92,6 +92,7 @@ func (h *StaffHandler) UpdateStaff(c echo.Context) error {
 	}
 
 	staff := new(models.Staff)
+	//リクエストボディからデータをバインド
 	if err := c.Bind(staff); err != nil {
 		return c.JSON(http.StatusBadRequest, err)
 	}
@@ -111,4 +112,25 @@ func (h *StaffHandler) UpdateStaff(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, staff)
+}
+
+func (h *StaffHandler) DeleteStaff(c echo.Context) error {
+	// URLからIDを取得
+	id, err := strconv.Atoi(c.Param("staff_id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid ID"})
+	}
+
+	staff := new(models.Staff)
+	result := h.db.Model(&models.Staff{}).Where("id = ?", id).Delete(staff)
+	if result.Error != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to delete staff"})
+	}
+
+	if result.RowsAffected == 0 {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "Staff not found"})
+	}
+	// 削除が成功したらステータスコード204を返す
+	return c.NoContent(http.StatusNoContent)
+
 }
