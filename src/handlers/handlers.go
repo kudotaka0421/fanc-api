@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"fanc-api/src/models"
 
@@ -80,4 +82,33 @@ func (h *StaffHandler) CreateStaff(c echo.Context) error {
 	return c.JSON(http.StatusCreated, map[string]string{
 		"message": "Staff created successfully",
 	})
+}
+
+func (h *StaffHandler) UpdateStaff(c echo.Context) error {
+	// URLからIDを取得
+	id, err := strconv.Atoi(c.Param("staff_id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, err)
+	}
+
+	staff := new(models.Staff)
+	if err := c.Bind(staff); err != nil {
+		return c.JSON(http.StatusBadRequest, err)
+	}
+
+	if err := staff.Validate(); err != nil {
+		return c.JSON(http.StatusBadRequest, err)
+	}
+
+	result := h.db.Model(&models.Staff{}).Where("id = ?", id).Updates(staff)
+
+	if result.Error != nil {
+		return c.JSON(http.StatusInternalServerError, result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return c.JSON(http.StatusNotFound, fmt.Errorf("No staff found with ID: %d", id))
+	}
+
+	return c.JSON(http.StatusOK, staff)
 }
