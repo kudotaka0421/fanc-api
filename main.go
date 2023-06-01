@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"fanc-api/src/handlers"
+	"fanc-api/src/models"
 	"fanc-api/src/routes"
 
 	"github.com/jinzhu/gorm"
@@ -27,8 +28,6 @@ func main() {
 	var db *gorm.DB
 	var err error
 
-	// connectionString := fmt.Sprintf("%s:%s@tcp(mysql:3306)/fanc?charset=utf8&parseTime=True&loc=Local", dbUser, dbPassword)
-
 	mysqlUser := os.Getenv("MYSQL_USER")
 	mysqlPassword := os.Getenv("MYSQL_PASSWORD")
 	mysqlDataBase := os.Getenv("MYSQL_DATABASE")
@@ -47,8 +46,13 @@ func main() {
 	}
 	defer db.Close()
 
+	// Migrate the schema
+	db.AutoMigrate(&models.Staff{}, &models.Tag{}) // StaffとTagのテーブルを作成または更新
+
 	staffHandler := handlers.NewStaffHandler(db)
-	routes.SetupRoutes(e, staffHandler)
+	tagHandler := handlers.NewTagHandler(db)
+
+	routes.SetupRoutes(e, staffHandler, tagHandler)
 
 	e.Start(":8080")
 }
