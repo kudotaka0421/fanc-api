@@ -9,10 +9,10 @@ import (
 	"fanc-api/src/models"
 	"fanc-api/src/routes"
 
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -32,8 +32,9 @@ func main() {
 	mysqlPassword := os.Getenv("MYSQL_PASSWORD")
 	mysqlDataBase := os.Getenv("MYSQL_DATABASE")
 	connectionString := fmt.Sprintf("%s:%s@tcp(mysql:3306)/%s?charset=utf8&parseTime=True&loc=Local", mysqlUser, mysqlPassword, mysqlDataBase)
+
 	for i := 0; i < 10; i++ {
-		db, err = gorm.Open("mysql", connectionString)
+		db, err = gorm.Open(mysql.Open(connectionString), &gorm.Config{})
 		if err == nil {
 			break
 		}
@@ -44,15 +45,17 @@ func main() {
 	if err != nil {
 		e.Logger.Fatal(err)
 	}
-	defer db.Close()
 
 	// Migrate the schema
-	db.AutoMigrate(&models.Staff{}, &models.Tag{}) // StaffとTagのテーブルを作成または更新
+	if err := db.AutoMigrate(&models.Staff{}, &models.Tag{}, &models.School{}); err != nil {
+		e.Logger.Fatal(err)
+	}
 
 	staffHandler := handlers.NewStaffHandler(db)
 	tagHandler := handlers.NewTagHandler(db)
+	schoolHandler := handlers.NewSchoolHandler(db)
 
-	routes.SetupRoutes(e, staffHandler, tagHandler)
+	routes.SetupRoutes(e, staffHandler, tagHandler, schoolHandler)
 
 	e.Start(":8080")
 }
