@@ -6,7 +6,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func SetupRoutes(e *echo.Echo, staffHandler *handlers.StaffHandler, tagHandler *handlers.TagHandler) {
+func SetupRoutes(e *echo.Echo, staffHandler *handlers.StaffHandler, tagHandler *handlers.TagHandler, schoolHandler *handlers.SchoolHandler) {
 	// Staff
 	e.POST("/api/staff", staffHandler.CreateStaff)
 	e.GET("/api/staff", staffHandler.GetStaffs)
@@ -20,5 +20,9 @@ func SetupRoutes(e *echo.Echo, staffHandler *handlers.StaffHandler, tagHandler *
 	e.GET("/api/tag/:tag_id", tagHandler.GetTagByID)
 	e.PUT("/api/tag/:tag_id", tagHandler.UpdateTag)
 	e.DELETE("/api/tag/:tag_id", tagHandler.DeleteTag)
+
+	// School
+	e.POST("/api/school", schoolHandler.CreateSchool)
+	e.GET("/api/school", schoolHandler.GetSchools)
 
 }

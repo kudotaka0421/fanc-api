@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -8,8 +9,8 @@ import (
 
 	"fanc-api/src/models"
 
-	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 )
 
 type TagHandler struct {
@@ -37,7 +38,7 @@ func (h *TagHandler) GetTagByID(c echo.Context) error {
 	tag := new(models.Tag)
 
 	if err := h.db.Select("id, text").Where("id = ?", tagID).First(&tag).Error; err != nil {
-		if gorm.IsRecordNotFoundError(err) {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
 				"message": "Tag not found",
 			})

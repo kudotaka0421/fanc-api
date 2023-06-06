@@ -1,14 +1,15 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 
 	"fanc-api/src/models"
 
-	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm" // Replace the old gorm import
 )
 
 type StaffHandler struct {
@@ -36,7 +37,7 @@ func (h *StaffHandler) GetStaffByID(c echo.Context) error {
 	staff := new(models.Staff)
 
 	if err := h.db.Select("id, first_name, last_name, first_name_kana, last_name_kana, email").Where("id = ?", staffID).First(&staff).Error; err != nil {
-		if gorm.IsRecordNotFoundError(err) {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
 				"message": "Staff not found",
 			})
