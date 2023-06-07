@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -179,4 +180,55 @@ func (h *SchoolHandler) GetSchools(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, schoolsResponse)
+}
+
+func (h *SchoolHandler) GetSchoolByID(c echo.Context) error {
+	fmt.Println("GetSchoolByID")
+	schoolID := c.Param("school_id")
+	school := new(models.School)
+
+	if err := h.db.Preload("Tags").Where("id = ?", schoolID).First(&school).Error; err != nil {
+		fmt.Println("DB Error:", err)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			fmt.Println("School not found")
+			return c.JSON(http.StatusNotFound, map[string]string{
+				"message": "School not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Failed to retrieve school",
+		})
+	}
+	// Unmarshal each JSON string field into []string
+	var imageLinks, recommendations, features []string
+
+	if err := json.Unmarshal(school.ImageLinks, &imageLinks); err != nil {
+		fmt.Println("Failed to unmarshal ImageLinks:", err)
+	}
+
+	if err := json.Unmarshal(school.Recommendations, &recommendations); err != nil {
+		fmt.Println("Failed to unmarshal Recommendations:", err)
+	}
+
+	if err := json.Unmarshal(school.Features, &features); err != nil {
+		fmt.Println("Failed to unmarshal Features:", err)
+	}
+
+	response := map[string]interface{}{
+		"id":              school.ID,
+		"isShow":          school.IsShow,
+		"name":            school.Name,
+		"monthlyFee":      school.MonthlyFee,
+		"termNum":         school.TermNum,
+		"termUnit":        school.TermUnit,
+		"remarks":         school.Remarks,
+		"overview":        school.Overview,
+		"imageLinks":      imageLinks,
+		"link":            school.Link,
+		"recommendations": recommendations,
+		"features":        features,
+		"tags":            school.Tags,
+	}
+
+	return c.JSON(http.StatusOK, response)
 }
