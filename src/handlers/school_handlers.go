@@ -214,6 +214,15 @@ func (h *SchoolHandler) GetSchoolByID(c echo.Context) error {
 		fmt.Println("Failed to unmarshal Features:", err)
 	}
 
+	// Convert school.Tags into []TagResponse
+	tagResponses := make([]TagResponse, len(school.Tags))
+	for i, tag := range school.Tags {
+		tagResponses[i] = TagResponse{
+			ID:   tag.ID,
+			Text: tag.Text,
+		}
+	}
+
 	response := map[string]interface{}{
 		"id":              school.ID,
 		"isShow":          school.IsShow,
@@ -227,7 +236,7 @@ func (h *SchoolHandler) GetSchoolByID(c echo.Context) error {
 		"link":            school.Link,
 		"recommendations": recommendations,
 		"features":        features,
-		"tags":            school.Tags,
+		"tags":            tagResponses, // use TagResponse instead of original Tag
 	}
 
 	return c.JSON(http.StatusOK, response)
