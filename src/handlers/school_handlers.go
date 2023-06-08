@@ -333,3 +333,30 @@ func (h *SchoolHandler) UpdateSchool(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, school)
 }
+
+func (h *SchoolHandler) DeleteSchool(c echo.Context) error {
+	// URLからIDを取得
+	id, err := strconv.Atoi(c.Param("school_id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid ID"})
+	}
+
+	school := new(models.School)
+	if err := h.db.First(school, id).Error; err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "School not found"})
+	}
+
+	// Delete associated SchoolTags first
+	if err := h.db.Model(school).Association("Tags").Clear(); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to delete associated SchoolTags"})
+	}
+
+	// Then delete the School
+	result := h.db.Delete(school)
+	if result.Error != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to delete school"})
+	}
+
+	// 削除が成功したらステータスコード204を返す
+	return c.NoContent(http.StatusNoContent)
+}
