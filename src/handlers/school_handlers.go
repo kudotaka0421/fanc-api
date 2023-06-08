@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"fanc-api/src/models"
 
@@ -214,13 +215,15 @@ func (h *SchoolHandler) GetSchoolByID(c echo.Context) error {
 		fmt.Println("Failed to unmarshal Features:", err)
 	}
 
-	// Convert school.Tags into []TagResponse
+	// Convert school.Tags into []TagResponse and extract tag IDs
 	tagResponses := make([]TagResponse, len(school.Tags))
+	selectedTagIds := make([]uint, len(school.Tags))
 	for i, tag := range school.Tags {
 		tagResponses[i] = TagResponse{
 			ID:   tag.ID,
 			Text: tag.Text,
 		}
+		selectedTagIds[i] = tag.ID
 	}
 
 	response := map[string]interface{}{
@@ -236,8 +239,97 @@ func (h *SchoolHandler) GetSchoolByID(c echo.Context) error {
 		"link":            school.Link,
 		"recommendations": recommendations,
 		"features":        features,
-		"tags":            tagResponses, // use TagResponse instead of original Tag
+		"tags":            tagResponses,   // use TagResponse instead of original Tag
+		"selectedTagIds":  selectedTagIds, // add selectedTagIds to the response
 	}
 
 	return c.JSON(http.StatusOK, response)
+}
+
+func (h *SchoolHandler) UpdateSchool(c echo.Context) error {
+	id, err := strconv.Atoi(c.Param("school_id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, err)
+	}
+
+	schoolParams := new(SchoolParams)
+	if err := c.Bind(schoolParams); err != nil {
+		return c.JSON(http.StatusBadRequest, err)
+	}
+
+	// string[]はそのままDBに保存できないので、json.RawMessageに変換する
+	var imageLinksJson, recommendationsJson, featuresJson json.RawMessage
+
+	if tmpJson, err := json.Marshal(schoolParams.ImageLinks); err != nil {
+		fmt.Println("Failed to marshal ImageLinks:", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Failed to marshal ImageLinks",
+		})
+	} else {
+		imageLinksJson = tmpJson
+	}
+
+	if tmpJson, err := json.Marshal(schoolParams.Recommendations); err != nil {
+		fmt.Println("Failed to marshal Recommendations:", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Failed to marshal Recommendations",
+		})
+	} else {
+		recommendationsJson = tmpJson
+	}
+
+	if tmpJson, err := json.Marshal(schoolParams.Features); err != nil {
+		fmt.Println("Failed to marshal Features:", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Failed to marshal Features",
+		})
+	} else {
+		featuresJson = tmpJson
+	}
+
+	school := &models.School{
+		Model:           gorm.Model{ID: schoolParams.ID},
+		IsShow:          schoolParams.IsShow,
+		Name:            schoolParams.Name,
+		MonthlyFee:      schoolParams.MonthlyFee,
+		TermNum:         schoolParams.TermNum,
+		TermUnit:        schoolParams.TermUnit,
+		Remarks:         schoolParams.Remarks,
+		Overview:        schoolParams.Overview,
+		ImageLinks:      imageLinksJson,
+		Link:            schoolParams.Link,
+		Recommendations: recommendationsJson,
+		Features:        featuresJson,
+	}
+
+	if err := school.Validate(); err != nil {
+		return c.JSON(http.StatusBadRequest, err)
+	}
+
+	tags := []models.Tag{}
+	for _, id := range schoolParams.SelectedTagIds {
+		tag := models.Tag{}
+		if err := h.db.First(&tag, id).Error; err != nil {
+			return c.JSON(http.StatusBadRequest, err)
+		}
+		tags = append(tags, tag)
+	}
+
+	// Clear existing associations and add new ones
+	if err := h.db.Model(school).Association("Tags").Clear(); err != nil {
+		return c.JSON(http.StatusInternalServerError, err)
+	}
+	h.db.Model(school).Association("Tags").Replace(tags)
+
+	result := h.db.Model(&models.School{}).Where("id = ?", id).Updates(school)
+
+	if result.Error != nil {
+		return c.JSON(http.StatusInternalServerError, result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return c.JSON(http.StatusNotFound, fmt.Errorf("No school found with ID: %d", id))
+	}
+
+	return c.JSON(http.StatusOK, school)
 }

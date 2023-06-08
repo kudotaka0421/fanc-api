@@ -25,5 +25,6 @@ func SetupRoutes(e *echo.Echo, staffHandler *handlers.StaffHandler, tagHandler *
 	e.POST("/api/school", schoolHandler.CreateSchool)
 	e.GET("/api/school", schoolHandler.GetSchools)
 	e.GET("/api/school/:school_id", schoolHandler.GetSchoolByID)
+	e.PUT("/api/school/:school_id", schoolHandler.UpdateSchool)
 
 }
