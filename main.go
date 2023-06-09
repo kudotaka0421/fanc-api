@@ -47,15 +47,14 @@ func main() {
 	}
 
 	// Migrate the schema
-	if err := db.AutoMigrate(&models.Staff{}, &models.Tag{}, &models.School{}); err != nil {
+	if err := db.AutoMigrate(&models.Tag{}, &models.School{}, &models.User{}); err != nil {
 		e.Logger.Fatal(err)
 	}
 
-	staffHandler := handlers.NewStaffHandler(db)
 	tagHandler := handlers.NewTagHandler(db)
 	schoolHandler := handlers.NewSchoolHandler(db)
 
-	routes.SetupRoutes(e, staffHandler, tagHandler, schoolHandler)
+	routes.SetupRoutes(e, tagHandler, schoolHandler)
 
 	e.Start(":8080")
 }
