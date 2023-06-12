@@ -16,6 +16,7 @@ func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *h
 
 	//User
 	e.POST("/api/user", userHandler.CreateUser)
+	e.GET("/api/user", userHandler.GetUsers)
 
 	// Tag
 	e.GET("/api/tag", tagHandler.GetTags)
