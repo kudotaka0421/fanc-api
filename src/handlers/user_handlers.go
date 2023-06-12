@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 
 	"golang.org/x/crypto/bcrypt"
@@ -45,6 +46,31 @@ func (h *UserHandler) GetUsers(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, userResponses)
+}
+
+func (h *UserHandler) GetUserByID(c echo.Context) error {
+	userID := c.Param("user_id")
+	user := new(models.User)
+
+	if err := h.db.Select("id, name, role, email").Where("id = ?", userID).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.JSON(http.StatusNotFound, map[string]string{
+				"message": "User not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Failed to retrieve user",
+		})
+	}
+
+	response := UserResponse{
+		ID:    user.ID,
+		Name:  user.Name,
+		Role:  user.Role,
+		Email: user.Email,
+	}
+
+	return c.JSON(http.StatusOK, response)
 }
 
 func (h *UserHandler) CreateUser(c echo.Context) error {
