@@ -15,8 +15,36 @@ type UserHandler struct {
 	db *gorm.DB
 }
 
+type UserResponse struct {
+	ID    uint   `json:"id"`
+	Name  string `json:"name"`
+	Role  int    `json:"role"`
+	Email string `json:"email"`
+}
+
 func NewUserHandler(db *gorm.DB) *UserHandler {
 	return &UserHandler{db}
+}
+
+func (h *UserHandler) GetUsers(c echo.Context) error {
+	var users []models.User
+	if err := h.db.Find(&users).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Failed to retrieve users",
+		})
+	}
+
+	userResponses := make([]UserResponse, len(users))
+	for i, user := range users {
+		userResponses[i] = UserResponse{
+			ID:    user.ID,
+			Name:  user.Name,
+			Role:  user.Role,
+			Email: user.Email,
+		}
+	}
+
+	return c.JSON(http.StatusOK, userResponses)
 }
 
 func (h *UserHandler) CreateUser(c echo.Context) error {
