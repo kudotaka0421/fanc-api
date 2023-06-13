@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -153,4 +154,26 @@ func (h *UserHandler) UpdateUser(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, user)
+}
+
+func (h *UserHandler) DeleteUser(c echo.Context) error {
+	// URLからIDを取得
+	id, err := strconv.Atoi(c.Param("user_id"))
+	if err != nil {
+		fmt.Println("1,", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid ID"})
+	}
+
+	user := new(models.User)
+	result := h.db.Model(&models.User{}).Where("id = ?", id).Delete(user)
+	if result.Error != nil {
+		fmt.Println("2", result.Error)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to delete user"})
+	}
+
+	if result.RowsAffected == 0 {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "User not found"})
+	}
+	// 削除が成功したらステータスコード204を返す
+	return c.NoContent(http.StatusNoContent)
 }
