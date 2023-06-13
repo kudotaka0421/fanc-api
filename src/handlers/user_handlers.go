@@ -3,11 +3,13 @@ package handlers
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
 	"golang.org/x/crypto/bcrypt"
 
 	"fanc-api/src/models"
 
+	"github.com/go-playground/validator"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm" // Replace the old gorm import
 )
@@ -108,4 +110,47 @@ func (h *UserHandler) CreateUser(c echo.Context) error {
 	return c.JSON(http.StatusCreated, map[string]string{
 		"message": "User created successfully",
 	})
+}
+
+func (h *UserHandler) UpdateUser(c echo.Context) error {
+	// URLからIDを取得
+	id, err := strconv.Atoi(c.Param("user_id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, err)
+	}
+
+	user := new(models.User)
+	//リクエストボディからデータをバインド
+	if err := c.Bind(user); err != nil {
+		return c.JSON(http.StatusBadRequest, err)
+	}
+
+	// 更新するフィールドのみをバリデーションします。
+	validate := validator.New()
+	err = validate.Var(user.Name, "required")
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, err)
+	}
+	err = validate.Var(user.Email, "required,email")
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, err)
+	}
+	err = validate.Var(user.Role, "required")
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, err)
+	}
+
+	result := h.db.Model(&models.User{}).Where("id = ?", id).Updates(models.User{Name: user.Name, Email: user.Email, Role: user.Role})
+
+	if result.Error != nil {
+		return c.JSON(http.StatusInternalServerError, result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return c.JSON(http.StatusNotFound, map[string]string{
+			"message": "No user found with ID: " + strconv.Itoa(id),
+		})
+	}
+
+	return c.JSON(http.StatusOK, user)
 }
