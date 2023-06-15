@@ -7,13 +7,6 @@ import (
 )
 
 func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *handlers.SchoolHandler, userHandler *handlers.UserHandler) {
-	// Staff
-	// e.POST("/api/staff", staffHandler.CreateStaff)
-	// e.GET("/api/staff", staffHandler.GetStaffs)
-	// e.GET("/api/staff/:staff_id", staffHandler.GetStaffByID)
-	// e.PUT("/api/staff/:staff_id", staffHandler.UpdateStaff)
-	// e.DELETE("/api/staff/:staff_id", staffHandler.DeleteStaff)
-
 	//User
 	e.POST("/api/user", userHandler.CreateUser)
 	e.GET("/api/user", userHandler.GetUsers)
