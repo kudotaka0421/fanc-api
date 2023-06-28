@@ -6,7 +6,10 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *handlers.SchoolHandler, userHandler *handlers.UserHandler) {
+func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *handlers.SchoolHandler, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler) {
+	// Auth
+	e.POST("/api/login", authHandler.Login)
+
 	//User
 	e.POST("/api/user", userHandler.CreateUser)
 	e.GET("/api/user", userHandler.GetUsers)
