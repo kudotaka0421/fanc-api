@@ -8,12 +8,14 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 
 	"fanc-api/src/models"
 
 	"github.com/go-playground/validator"
+	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
 	"github.com/sendgrid/sendgrid-go"
 	"github.com/sendgrid/sendgrid-go/helpers/mail"
@@ -101,7 +103,7 @@ func sendConfirmationEmail(user *models.User) error {
 
 	p.SetDynamicTemplateData("name", user.Name)
 	// [TODO] ローカルやstgなどの環境によって、ホスト名を変える対応をする
-	p.SetDynamicTemplateData("authenticationLink", "http://localhost:8080/confirm-account/"+user.Token)
+	p.SetDynamicTemplateData("authenticationLink", "http://localhost:5173/confirm-account/"+user.Token)
 
 	m.AddPersonalizations(p)
 
@@ -122,6 +124,8 @@ func sendConfirmationEmail(user *models.User) error {
 	return nil
 
 }
+
+var jwtKey = []byte(os.Getenv("JWT_SECRET_KEY"))
 
 func (h *UserHandler) ConfirmAccount(c echo.Context) error {
 	token := c.Param("token")
@@ -146,8 +150,25 @@ func (h *UserHandler) ConfirmAccount(c echo.Context) error {
 		})
 	}
 
+	// ユーザーの認証が成功したため、JWTを作成します
+	expirationTime := time.Now().Add(24 * time.Hour)
+	claims := &jwt.StandardClaims{
+		Subject:   strconv.FormatUint(uint64(user.ID), 10), // user.IDをstring型に変換してSubjectにセット
+		ExpiresAt: expirationTime.Unix(),
+	}
+
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := jwtToken.SignedString(jwtKey)
+
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Failed to create JWT",
+		})
+	}
+
 	return c.JSON(http.StatusOK, map[string]string{
 		"message": "Account confirmed successfully.",
+		"token":   tokenString,
 	})
 }
 
