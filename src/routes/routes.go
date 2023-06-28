@@ -13,7 +13,7 @@ func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *h
 	e.GET("/api/user/:user_id", userHandler.GetUserByID)
 	e.PUT("/api/user/:user_id", userHandler.UpdateUser)
 	e.DELETE("/api/user/:user_id", userHandler.DeleteUser)
-	e.GET("/confirm-account/:token", userHandler.ConfirmAccount)
+	e.POST("/api/confirm-account/:token", userHandler.ConfirmAccount)
 
 	// Tag
 	e.GET("/api/tag", tagHandler.GetTags)
