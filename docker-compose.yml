@@ -5,12 +5,12 @@ services:
     build: .
     ports:
       - "8080:8080"
-      # // APIサーバーからMySQLコンテナに接続する際に使用するための環境変数
     environment:
-      MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_DATABASE: fanc
-      MYSQL_USER: root
-      MYSQL_PASSWORD: root_password
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
     depends_on:
       - mysql
 
@@ -19,10 +19,10 @@ services:
     # ↓これらの環境変数は、コンテナ起動時に使用する。
     # dockerimageですでに指定された環境定数名なので、カスタマイズはできない
     environment:
-      MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_DATABASE: fanc
-      MYSQL_USER: root
-      MYSQL_PASSWORD: root_password
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
       - "4306:3306"
     volumes:

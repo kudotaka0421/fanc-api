@@ -15,6 +15,8 @@ type User struct {
 	Password  string     `gorm:"size:255;not null" validate:"required" json:"Password"`
 	Role      int        `gorm:"not null" validate:"required" json:"Role"`
 	Email     string     `gorm:"size:255;not null;unique" validate:"required,email" json:"email"`
+	IsActive  bool       `gorm:"not null;default:false" json:"isActive"`
+	Token     string     `gorm:"size:255;not null;unique" json:"token"`
 }
 
 func (u *User) Validate() error {

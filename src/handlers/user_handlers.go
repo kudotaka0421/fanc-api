@@ -1,9 +1,12 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 
 	"golang.org/x/crypto/bcrypt"
@@ -12,6 +15,8 @@ import (
 
 	"github.com/go-playground/validator"
 	"github.com/labstack/echo/v4"
+	"github.com/sendgrid/sendgrid-go"
+	"github.com/sendgrid/sendgrid-go/helpers/mail"
 	"gorm.io/gorm" // Replace the old gorm import
 )
 
@@ -76,6 +81,76 @@ func (h *UserHandler) GetUserByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, response)
 }
 
+func GenerateUniqueToken() (string, error) {
+	token := make([]byte, 16) // Adjust size as needed.
+	if _, err := rand.Read(token); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(token), nil
+}
+
+func sendConfirmationEmail(user *models.User) error {
+	m := mail.NewV3Mail()
+
+	from := mail.NewEmail("Example User", "test@example.com")
+	m.SetFrom(from)
+
+	to := mail.NewEmail("User", user.Email)
+	p := mail.NewPersonalization()
+	p.AddTos(to)
+
+	p.SetDynamicTemplateData("name", user.Name)
+	// [TODO] ローカルやstgなどの環境によって、ホスト名を変える対応をする
+	p.SetDynamicTemplateData("authenticationLink", "http://localhost:8080/confirm-account/"+user.Token)
+
+	m.AddPersonalizations(p)
+
+	m.SetTemplateID("d-b28b53bd8cee440ab2ea62b3cd3d92ff")
+
+	sendgridClient := sendgrid.NewSendClient(os.Getenv("SENDGRID_API_KEY"))
+
+	response, err := sendgridClient.Send(m)
+	if err != nil {
+		return err
+	}
+
+	// レスポンスのステータスコードが成功（2xx）でなければエラーを返す
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return fmt.Errorf("Failed to send email: %v", response.Body)
+	}
+
+	return nil
+
+}
+
+func (h *UserHandler) ConfirmAccount(c echo.Context) error {
+	token := c.Param("token")
+
+	user := new(models.User)
+	if err := h.db.Where("token = ?", token).First(user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.JSON(http.StatusNotFound, map[string]string{
+				"message": "User not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Failed to retrieve user",
+		})
+	}
+
+	user.IsActive = true
+
+	if err := h.db.Save(user).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Failed to confirm account",
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{
+		"message": "Account confirmed successfully.",
+	})
+}
+
 func (h *UserHandler) CreateUser(c echo.Context) error {
 	user := new(models.User)
 
@@ -97,6 +172,14 @@ func (h *UserHandler) CreateUser(c echo.Context) error {
 	// ハッシュ化したパスワードをセットする
 	user.Password = string(hashedPassword)
 
+	// ユニークなトークンを生成
+	user.Token, err = GenerateUniqueToken()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Failed to generate unique token",
+		})
+	}
+
 	// バリデーションの実行
 	if err := user.Validate(); err != nil {
 		return c.JSON(http.StatusBadRequest, err)
@@ -108,6 +191,10 @@ func (h *UserHandler) CreateUser(c echo.Context) error {
 			"message": "Failed to create user",
 		})
 	}
+
+	// 確認メールを送信
+	sendConfirmationEmail(user)
+
 	return c.JSON(http.StatusCreated, map[string]string{
 		"message": "User created successfully",
 	})
@@ -160,14 +247,12 @@ func (h *UserHandler) DeleteUser(c echo.Context) error {
 	// URLからIDを取得
 	id, err := strconv.Atoi(c.Param("user_id"))
 	if err != nil {
-		fmt.Println("1,", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid ID"})
 	}
 
 	user := new(models.User)
 	result := h.db.Model(&models.User{}).Where("id = ?", id).Delete(user)
 	if result.Error != nil {
-		fmt.Println("2", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to delete user"})
 	}
 
