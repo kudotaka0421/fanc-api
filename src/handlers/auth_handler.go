@@ -27,6 +27,13 @@ func NewAuthHandler(db *gorm.DB) *AuthHandler {
 	return &AuthHandler{db}
 }
 
+type MeResponse struct {
+	IsAuthenticated bool    `json:"isAuthenticated"`
+	Name            *string `json:"name"`
+	Email           *string `json:"email"`
+	Role            *int    `json:"role"`
+}
+
 func (h *AuthHandler) Login(c echo.Context) error {
 	request := new(LoginRequest)
 	if err := c.Bind(request); err != nil {
@@ -74,5 +81,26 @@ func (h *AuthHandler) Login(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{
 		"message": "Login successful.",
 		"token":   tokenString,
+	})
+}
+
+func (h *AuthHandler) GetMe(c echo.Context) error {
+	// Parse the user ID from the subject
+	token := c.Get("user").(*jwt.Token)
+	claims := token.Claims.(jwt.MapClaims)
+	userId, _ := strconv.Atoi(claims["sub"].(string))
+
+	user := new(models.User)
+	if err := h.db.First(user, userId).Error; err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{
+			"message": "User not found",
+		})
+	}
+
+	return c.JSON(http.StatusOK, MeResponse{
+		IsAuthenticated: true,
+		Name:            &user.Name,
+		Email:           &user.Email,
+		Role:            &user.Role,
 	})
 }
