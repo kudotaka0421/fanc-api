@@ -9,7 +9,8 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
-func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *handlers.SchoolHandler, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler) {
+func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *handlers.SchoolHandler, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, healthCheckHandler *handlers.HealthCheckHandler) {
+	e.GET("/healthcheck", healthCheckHandler.HealthCheck)
 	// Auth
 	// [TODO]/api/userは「/api/signup」として切り分けたい
 	e.POST("/api/login", authHandler.Login)
@@ -28,9 +29,6 @@ func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *h
 	// Group for routes that require authentication
 	authenticated := e.Group("")
 	authenticated.Use(jwtMiddleware)
-
-	// Authenticated /me route
-	authenticated.GET("/api/me", authHandler.GetMe)
 
 	// Authenticated /me route
 	authenticated.GET("/api/me", authHandler.GetMe)

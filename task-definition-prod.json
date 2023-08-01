@@ -1,0 +1,74 @@
+{
+    "family": "fanc-api-task-definition-prod",
+    "containerDefinitions": [
+        {
+            "name": "fanc-api-container-prod",
+            "image": "757245745517.dkr.ecr.us-east-1.amazonaws.com/fanc-app:latest",
+            "cpu": 0,
+            "portMappings": [
+                {
+                    "name": "http",
+                    "containerPort": 8080,
+                    "hostPort": 8080,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                }
+            ],
+            "essential": true,
+            "environment": [
+                {
+                    "name": "MYSQL_DATABASE",
+                    "value": "fancdb"
+                },
+                {
+                    "name": "MYSQL_PASSWORD",
+                    "value": "fanc2023"
+                },
+                {
+                    "name": "APP_ENV",
+                    "value": "production"
+                },
+                {
+                    "name": "MYSQL_ROOT_PASSWORD",
+                    "value": "fanc2023"
+                },
+                {
+                    "name": "MYSQL_USER",
+                    "value": "fancroot"
+                },
+                {
+                    "name": "SENDGRID_API_KEY",
+                    "value": "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"
+                },
+                {
+                    "name": "JWT_SECRET_KEY",
+                    "value": "KbHO6UrJHDxIeGwRGw8unB4dEDLn8fNpXY5uFYwfup8"
+                }
+            ],
+            "environmentFiles": [],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "ulimits": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-create-group": "true",
+                    "awslogs-group": "/ecs/fanc-api-task-definition-prod",
+                    "awslogs-region": "us-east-1",
+                    "awslogs-stream-prefix": "ecs"
+                }
+            }
+        }
+    ],
+    "executionRoleArn": "arn:aws:iam::757245745517:role/ecsTaskExecutionRole",
+    "networkMode": "awsvpc",
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "1024",
+    "memory": "3072",
+    "runtimePlatform": {
+        "cpuArchitecture": "ARM64",
+        "operatingSystemFamily": "LINUX"
+    }
+}

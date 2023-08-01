@@ -102,8 +102,8 @@ func sendConfirmationEmail(user *models.User) error {
 	p.AddTos(to)
 
 	p.SetDynamicTemplateData("name", user.Name)
-	// [TODO] ローカルやstgなどの環境によって、ホスト名を変える対応をする
-	p.SetDynamicTemplateData("authenticationLink", "http://localhost:5173/confirm-account/"+user.Token)
+	authenticationLink := os.Getenv("CORS_ALLOW_ORIGIN") + "/confirm-account/" + user.Token
+	p.SetDynamicTemplateData("authenticationLink", authenticationLink)
 
 	m.AddPersonalizations(p)
 

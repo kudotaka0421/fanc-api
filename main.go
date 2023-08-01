@@ -20,7 +20,7 @@ func main() {
 
 	// CORSの設定
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: []string{"http://localhost:5173"},
+		AllowOrigins: []string{os.Getenv("CORS_ALLOW_ORIGIN")},
 		AllowMethods: []string{echo.GET, echo.PUT, echo.POST, echo.DELETE},
 	}))
 
@@ -31,7 +31,9 @@ func main() {
 	mysqlUser := os.Getenv("MYSQL_USER")
 	mysqlPassword := os.Getenv("MYSQL_PASSWORD")
 	mysqlDataBase := os.Getenv("MYSQL_DATABASE")
-	connectionString := fmt.Sprintf("%s:%s@tcp(mysql:3306)/%s?charset=utf8&parseTime=True&loc=Local", mysqlUser, mysqlPassword, mysqlDataBase)
+	mysqlHost := os.Getenv("MYSQL_HOST")
+	connectionString := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?charset=utf8&parseTime=True&loc=Local", mysqlUser, mysqlPassword, mysqlHost, mysqlDataBase)
+	// connectionString := fmt.Sprintf("%s:%s@tcp(mysql:3306)/%s?charset=utf8&parseTime=True&loc=Local", mysqlUser, mysqlPassword, mysqlDataBase)
 
 	for i := 0; i < 10; i++ {
 		db, err = gorm.Open(mysql.Open(connectionString), &gorm.Config{})
@@ -55,8 +57,8 @@ func main() {
 	schoolHandler := handlers.NewSchoolHandler(db)
 	userHandler := handlers.NewUserHandler(db)
 	authHandler := handlers.NewAuthHandler(db)
-
-	routes.SetupRoutes(e, tagHandler, schoolHandler, userHandler, authHandler)
+	healthCheckHandler := handlers.NewHealthCheckHandler()
+	routes.SetupRoutes(e, tagHandler, schoolHandler, userHandler, authHandler, healthCheckHandler)
 
 	e.Start(":8080")
 }

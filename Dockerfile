@@ -15,10 +15,10 @@ RUN go mod download
 COPY . .
 
 # アプリケーションをビルド
-RUN go build -o main .
+RUN GOOS=linux GOARCH=arm64 go build -o main .
 
 # ポートをエクスポート
 EXPOSE 8080
 
-# アプリケーションを実行
-CMD ["./main"]
+# アプリケーションが環境変数を受け取れるようにする
+CMD ["./main", "-e", "${APP_ENV}"]

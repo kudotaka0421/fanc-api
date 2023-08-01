@@ -1,3 +1,5 @@
+# docker-compose.ymlをの内容を修正したら、タスク定義の方も同様に修正することを忘れずに！
+
 version: '3.8'
 
 services:
@@ -12,9 +14,11 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       SENDGRID_API_KEY: ${SENDGRID_API_KEY}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      MYSQL_HOST: ${MYSQL_HOST}
     depends_on:
       - mysql
 
+  # // ここで「mysql」というサービス名を指定しているので、ホスト名は「mysql」になる
   mysql:
     image: mysql:8.0
     # ↓これらの環境変数は、コンテナ起動時に使用する。
