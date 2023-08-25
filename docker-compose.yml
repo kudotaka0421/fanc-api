@@ -15,6 +15,7 @@ services:
       SENDGRID_API_KEY: ${SENDGRID_API_KEY}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       MYSQL_HOST: ${MYSQL_HOST}
+      CORS_ALLOW_ORIGIN: ${CORS_ALLOW_ORIGIN}
     depends_on:
       - mysql
 
