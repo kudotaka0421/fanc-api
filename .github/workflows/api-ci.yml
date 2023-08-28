@@ -58,7 +58,6 @@ jobs:
             task-definition-name: "fanc-api-definition-task-stg"
             ecs-service-name: "fanc-api-service-stg"
             ecs-cluster-name: "fanc-api-cluster-stg"
-
     if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', matrix.branch)
     steps:
       - name: Checkout code
@@ -80,7 +79,22 @@ jobs:
   update-task-definition:
     needs: docker-build-and-push
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    strategy:
+      matrix:
+        include:
+          - environment: "prod"
+            branch: "main"
+            image-name: "fanc-api-prod"
+            task-definition-name: "fanc-api-definition-task-prod"
+            ecs-service-name: "fanc-api-service-prod-6-3"
+            ecs-cluster-name: "fanc-api-cluster-prod"
+          - environment: "stg"
+            branch: "develop"
+            image-name: "fanc-api-stg"
+            task-definition-name: "fanc-api-definition-task-stg"
+            ecs-service-name: "fanc-api-service-stg"
+            ecs-cluster-name: "fanc-api-cluster-stg"
+    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', matrix.branch)
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
