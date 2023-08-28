@@ -1,0 +1,107 @@
+name: API CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.20.2 
+
+    - name: Cache Go modules
+      uses: actions/cache@v2
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Download dependencies
+      run: go mod download
+
+    - name: Build
+      run: go build -v ./...
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    # 【TODO】testコードの実装が完了したらここのコメント外す
+    # - name: Test
+    #   run: go test -v ./...
+
+  docker-build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - environment: "prod"
+            branch: "main"
+            image-name: "fanc-api-prod"
+            task-definition-name: "fanc-api-definition-task-prod"
+            ecs-service-name: "fanc-api-service-prod-6-3"
+            ecs-cluster-name: "fanc-api-cluster-prod"
+          - environment: "stg"
+            branch: "develop"
+            image-name: "fanc-api-stg"
+            task-definition-name: "fanc-api-definition-task-stg"
+            ecs-service-name: "fanc-api-service-stg"
+            ecs-cluster-name: "fanc-api-cluster-stg"
+        environment: ["prod", "stg"]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build, tag, and push image to Amazon ECR
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_NAME: ${{ matrix.image-name }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t $ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
+
+  update-task-definition:
+    needs: docker-build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up AWS CLI
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Update Amazon ECS service
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_NAME: ${{ matrix.image-name }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        CURRENT_TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition ${{ matrix.task-definition-name }} --query "taskDefinition" --output json)
+        NEW_TASK_DEFINITION=$(echo $CURRENT_TASK_DEFINITION | jq --arg IMAGE "$ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG" '.containerDefinitions[0].image=$IMAGE')
+        TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json $NEW_TASK_DEFINITION | jq -r .taskDefinition.taskDefinitionArn)
+        aws ecs update-service --cluster ${{ matrix.ecs-cluster-name }} --service ${{ matrix.ecs-service-name }} --task-definition $TASK_DEF_ARN
