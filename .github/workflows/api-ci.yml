@@ -79,12 +79,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       
+      - name: Check if jq is installed
+        run: |
+          if which jq; then
+            echo "jq is installed"
+          else
+            echo "jq is not installed"
+          fi
+
       - name: Set up AWS CLI
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
+
+      - name: Install jq  # jqの明示的なインストール（オプション）
+        run: sudo apt-get install -y jq
 
       - name: Update Amazon ECS service
         env:
@@ -103,6 +114,10 @@ jobs:
             IMAGE_NAME="fanc-app-stg"
           fi
           CURRENT_TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition $TASK_DEFINITION_NAME --query "taskDefinition" --output json)
+          echo "Current Task Definition:"
+          echo $CURRENT_TASK_DEFINITION
           NEW_TASK_DEFINITION=$(echo $CURRENT_TASK_DEFINITION | jq --arg IMAGE "$ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG" '.containerDefinitions[0].image=$IMAGE')
+          echo "New Task Definition:"
+          echo $NEW_TASK_DEFINITION
           TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json $NEW_TASK_DEFINITION | jq -r .taskDefinition.taskDefinitionArn)
           aws ecs update-service --cluster $ECS_CLUSTER_NAME --service $ECS_SERVICE_NAME --task-definition $TASK_DEF_ARN
