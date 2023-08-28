@@ -44,6 +44,7 @@ jobs:
     #   run: go test -v ./...
 
   docker-build-and-push:
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     needs: test
     runs-on: ubuntu-latest
     strategy:
@@ -55,23 +56,27 @@ jobs:
             task-definition-name: "fanc-api-definition-task-prod"
             ecs-service-name: "fanc-api-service-prod-6-3"
             ecs-cluster-name: "fanc-api-cluster-prod"
+
           - environment: "stg"
             branch: "develop"
             image-name: "fanc-api-stg"
             task-definition-name: "fanc-api-definition-task-stg"
             ecs-service-name: "fanc-api-service-stg"
             ecs-cluster-name: "fanc-api-cluster-stg"
-        environment: ["prod", "stg"]
+
 
     steps:
-    - name: Checkout code
+    - if: github.ref == 'refs/heads/' + matrix.branch
+      name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Login to Amazon ECR
+    - if: github.ref == 'refs/heads/' + matrix.branch
+      name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
 
-    - name: Build, tag, and push image to Amazon ECR
+    - if: github.ref == 'refs/heads/' + matrix.branch
+      name: Build, tag, and push image to Amazon ECR
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         IMAGE_NAME: ${{ matrix.image-name }}
@@ -81,6 +86,7 @@ jobs:
         docker push $ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
 
   update-task-definition:
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     needs: docker-build-and-push
     runs-on: ubuntu-latest
 
