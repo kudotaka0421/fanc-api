@@ -41,6 +41,7 @@ jobs:
         uses: actions/checkout@v2
 
   docker-build-and-push:
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     needs: test
     runs-on: ubuntu-latest
     strategy:
@@ -60,16 +61,13 @@ jobs:
             ecs-cluster-name: "fanc-api-cluster-stg"
     steps:
       - name: Checkout code
-        if: github.ref == format('refs/heads/{0}', matrix.branch)
         uses: actions/checkout@v2
 
       - name: Login to Amazon ECR
-        if: github.ref == format('refs/heads/{0}', matrix.branch)
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
       - name: Build, tag, and push image to Amazon ECR
-        if: github.ref == format('refs/heads/{0}', matrix.branch)
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_NAME: ${{ matrix.image-name }}
@@ -81,24 +79,9 @@ jobs:
   update-task-definition:
     needs: docker-build-and-push
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - environment: "prod"
-            branch: "main"
-            image-name: "fanc-api-prod"
-            task-definition-name: "fanc-api-definition-task-prod"
-            ecs-service-name: "fanc-api-service-prod-6-3"
-            ecs-cluster-name: "fanc-api-cluster-prod"
-          - environment: "stg"
-            branch: "develop"
-            image-name: "fanc-api-stg"
-            task-definition-name: "fanc-api-definition-task-stg"
-            ecs-service-name: "fanc-api-service-stg"
-            ecs-cluster-name: "fanc-api-cluster-stg"
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     steps:
       - name: Checkout code
-        if: github.ref == format('refs/heads/{0}', matrix.branch)
         uses: actions/checkout@v2
 
       - name: Set up AWS CLI
@@ -109,7 +92,6 @@ jobs:
           aws-region: us-east-1
 
       - name: Update Amazon ECS service
-        if: github.ref == format('refs/heads/{0}', matrix.branch)
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_NAME: ${{ matrix.image-name }}
