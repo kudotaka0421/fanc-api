@@ -13,10 +13,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+      
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
           go-version: 1.20.2 
+      
       - name: Cache Go modules
         uses: actions/cache@v2
         with:
@@ -24,8 +26,10 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+      
       - name: Download dependencies
         run: go mod download
+      
       - name: Build
         run: go build -v ./...
 
@@ -39,68 +43,66 @@ jobs:
   docker-build-and-push:
     needs: test
     runs-on: ubuntu-latest
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && github.event_name == 'push'
-    strategy:
-      fail-fast: false
-      matrix:
-        environment: 
-          - prod
-          - stg
-        include:
-          - environment: prod
-            branch: refs/heads/main
-            image-name: "fanc-app"
-            task-definition-name: "fanc-api-definition-task-prod"
-            ecs-service-name: "fanc-api-service-prod-6-3"
-            ecs-cluster-name: "fanc-api-cluster-prod"
-          - environment: stg
-            branch: refs/heads/develop
-            image-name: "fanc-app-stg"
-            task-definition-name: "fanc-api-definition-task-stg"
-            ecs-service-name: "fanc-api-service-stg"
-            ecs-cluster-name: "fanc-api-cluster-stg"
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+      
       - name: Set up AWS CLI
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
+
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
+      
       - name: Build, tag, and push image to Amazon ECR
-        if: github.ref == matrix.branch
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_NAME: ${{ matrix.image-name }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
+          IMAGE_NAME="fanc-app"  # default to prod
+          if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+            IMAGE_NAME="fanc-app-stg"
+          fi
           docker build -t $ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
 
   update-task-definition:
     needs: docker-build-and-push
     runs-on: ubuntu-latest
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && github.event_name == 'push'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+      
       - name: Set up AWS CLI
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
+
       - name: Update Amazon ECS service
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_NAME: ${{ matrix.image-name }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          CURRENT_TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition ${{ matrix.task-definition-name }} --query "taskDefinition" --output json)
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            TASK_DEFINITION_NAME="fanc-api-definition-task-prod"
+            ECS_SERVICE_NAME="fanc-api-service-prod-6-3"
+            ECS_CLUSTER_NAME="fanc-api-cluster-prod"
+            IMAGE_NAME="fanc-app"
+          else
+            TASK_DEFINITION_NAME="fanc-api-definition-task-stg"
+            ECS_SERVICE_NAME="fanc-api-service-stg"
+            ECS_CLUSTER_NAME="fanc-api-cluster-stg"
+            IMAGE_NAME="fanc-app-stg"
+          fi
+          CURRENT_TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition $TASK_DEFINITION_NAME --query "taskDefinition" --output json)
           NEW_TASK_DEFINITION=$(echo $CURRENT_TASK_DEFINITION | jq --arg IMAGE "$ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG" '.containerDefinitions[0].image=$IMAGE')
           TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json $NEW_TASK_DEFINITION | jq -r .taskDefinition.taskDefinitionArn)
-          aws ecs update-service --cluster ${{ matrix.ecs-cluster-name }} --service ${{ matrix.ecs-service-name }} --task-definition $TASK_DEF_ARN
+          aws ecs update-service --cluster $ECS_CLUSTER_NAME --service $ECS_SERVICE_NAME --task-definition $TASK_DEF_ARN
