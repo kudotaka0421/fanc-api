@@ -13,12 +13,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
           go-version: 1.20.2 
-
       - name: Cache Go modules
         uses: actions/cache@v2
         with:
@@ -26,10 +24,8 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-
       - name: Download dependencies
         run: go mod download
-
       - name: Build
         run: go build -v ./...
 
@@ -41,20 +37,24 @@ jobs:
         uses: actions/checkout@v2
 
   docker-build-and-push:
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     needs: test
     runs-on: ubuntu-latest
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && github.event_name == 'push'
     strategy:
+      fail-fast: false
       matrix:
+        environment: 
+          - prod
+          - stg
         include:
-          - environment: "prod"
-            branch: "main"
+          - environment: prod
+            branch: refs/heads/main
             image-name: "fanc-app"
             task-definition-name: "fanc-api-definition-task-prod"
             ecs-service-name: "fanc-api-service-prod-6-3"
             ecs-cluster-name: "fanc-api-cluster-prod"
-          - environment: "stg"
-            branch: "develop"
+          - environment: stg
+            branch: refs/heads/develop
             image-name: "fanc-app-stg"
             task-definition-name: "fanc-api-definition-task-stg"
             ecs-service-name: "fanc-api-service-stg"
@@ -62,19 +62,17 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-
       - name: Set up AWS CLI
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
-
       - name: Build, tag, and push image to Amazon ECR
+        if: github.ref == matrix.branch
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_NAME: ${{ matrix.image-name }}
@@ -86,18 +84,16 @@ jobs:
   update-task-definition:
     needs: docker-build-and-push
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && github.event_name == 'push'
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-
       - name: Set up AWS CLI
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-
       - name: Update Amazon ECS service
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
