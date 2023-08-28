@@ -119,5 +119,5 @@ jobs:
           NEW_TASK_DEFINITION=$(echo $CURRENT_TASK_DEFINITION | jq --arg IMAGE "$ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG" '.containerDefinitions[0].image=$IMAGE')
           echo "New Task Definition:"
           echo $NEW_TASK_DEFINITION
-          TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json $NEW_TASK_DEFINITION | jq -r .taskDefinition.taskDefinitionArn)
+          TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json "$NEW_TASK_DEFINITION" | jq -r .taskDefinition.taskDefinitionArn)
           aws ecs update-service --cluster $ECS_CLUSTER_NAME --service $ECS_SERVICE_NAME --task-definition $TASK_DEF_ARN
