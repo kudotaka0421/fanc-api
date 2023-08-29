@@ -64,12 +64,12 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          IMAGE_NAME="fanc-app"  # default to prod
+          FULL_IMAGE_NAME="$ECR_REGISTRY/fanc-app:$IMAGE_TAG"  # default to prod
           if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
-            IMAGE_NAME="fanc-app-stg"
+            FULL_IMAGE_NAME="$ECR_REGISTRY/fanc-app-stg:$IMAGE_TAG"
           fi
-          docker build -t $ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
+          docker build -t $FULL_IMAGE_NAME .
+          docker push $FULL_IMAGE_NAME
 
   update-task-definition:
     needs: docker-build-and-push
@@ -106,17 +106,17 @@ jobs:
             TASK_DEFINITION_NAME="fanc-api-definition-task-prod"
             ECS_SERVICE_NAME="fanc-api-service-prod-6-3"
             ECS_CLUSTER_NAME="fanc-api-cluster-prod"
-            IMAGE_NAME="fanc-app"
+            FULL_IMAGE_NAME="$ECR_REGISTRY/fanc-app:$IMAGE_TAG"
           else
             TASK_DEFINITION_NAME="fanc-api-definition-task-stg"
             ECS_SERVICE_NAME="fanc-api-service-stg"
             ECS_CLUSTER_NAME="fanc-api-cluster-stg"
-            IMAGE_NAME="fanc-app-stg"
+            FULL_IMAGE_NAME="$ECR_REGISTRY/fanc-app-stg:$IMAGE_TAG"
           fi
           CURRENT_TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition $TASK_DEFINITION_NAME --query "taskDefinition" --output json)
           echo "Current Task Definition:"
           echo $CURRENT_TASK_DEFINITION
-          NEW_TASK_DEFINITION=$(echo $CURRENT_TASK_DEFINITION | jq --arg IMAGE "$ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG" ' .containerDefinitions[0].image=$IMAGE | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
+          NEW_TASK_DEFINITION=$(echo $CURRENT_TASK_DEFINITION | jq --arg IMAGE "$FULL_IMAGE_NAME" ' .containerDefinitions[0].image=$IMAGE | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
           echo "New Task Definition:"
           echo $NEW_TASK_DEFINITION
           TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json "$NEW_TASK_DEFINITION" | jq -r .taskDefinition.taskDefinitionArn)
