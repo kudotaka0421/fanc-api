@@ -61,10 +61,10 @@ jobs:
       
       - name: Build, tag, and push image to Amazon ECR
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          FULL_IMAGE_NAME="$ECR_REGISTRY/fanc-app:$IMAGE_TAG"  # default to prod
+          FULL_IMAGE_NAME="$ECR_REGISTRY/fanc-app:$IMAGE_TAG"
           if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
             FULL_IMAGE_NAME="$ECR_REGISTRY/fanc-app-stg:$IMAGE_TAG"
           fi
@@ -99,7 +99,7 @@ jobs:
 
       - name: Update Amazon ECS service
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           if [ "${{ github.ref }}" == "refs/heads/main" ]; then
