@@ -76,7 +76,7 @@ jobs:
         uses: rtCamp/action-slack-notify@v2.0.2
         env:
           SLACK_CHANNEL: dev_fanc_api
-          SLACK_TITLE: デプロイが成功しました
+          SLACK_TITLE: ECRリポジトリの更新に成功しました
           SLACK_COLOR: good
           SLACK_USERNAME: ちくわ
           SLACK_WEBHOOK: ${{ secrets.DEV_FANC_API_SLACK_WEBHOOK_URL }}
@@ -87,7 +87,7 @@ jobs:
         if: failure()
         env:
           SLACK_CHANNEL: dev_fanc_api
-          SLACK_TITLE: デプロイが失敗しました
+          SLACK_TITLE: ECRリポジトリの更新に失敗しました
           SLACK_COLOR: danger
           SLACK_USERNAME: ちくわ
           SLACK_WEBHOOK: ${{ secrets.DEV_FANC_API_SLACK_WEBHOOK_URL }}
@@ -150,7 +150,7 @@ jobs:
         uses: rtCamp/action-slack-notify@v2.0.2
         env:
           SLACK_CHANNEL: dev_fanc_api
-          SLACK_TITLE: デプロイが成功しました
+          SLACK_TITLE: タスク定義・サービスの更新に成功しました
           SLACK_COLOR: good
           SLACK_USERNAME: ちくわ
           SLACK_WEBHOOK: ${{ secrets.DEV_FANC_API_SLACK_WEBHOOK_URL }}
@@ -161,7 +161,7 @@ jobs:
         if: failure()
         env:
           SLACK_CHANNEL: dev_fanc_api
-          SLACK_TITLE: デプロイが失敗しました
+          SLACK_TITLE:  タスク定義・サービスの更新に失敗しました
           SLACK_COLOR: danger
           SLACK_USERNAME: ちくわ
           SLACK_WEBHOOK: ${{ secrets.DEV_FANC_API_SLACK_WEBHOOK_URL }}
