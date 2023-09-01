@@ -71,16 +71,28 @@ jobs:
           docker build -t $FULL_IMAGE_NAME .
           docker push $FULL_IMAGE_NAME
 
-      - name: Slack Notification
-        if: always()
+      - name: Slack Notification on Success
+        if: success()
         uses: rtCamp/action-slack-notify@v2.0.2
         env:
           SLACK_CHANNEL: dev_fanc_api
-          SLACK_TITLE: ${{ if eq(job.status, 'success') }}デプロイが成功しました${{ else }}デプロイが失敗しました${{ end }}
-          SLACK_COLOR: ${{ if eq(job.status, 'success') }}good${{ else }}danger${{ end }}
+          SLACK_TITLE: デプロイが成功しました
+          SLACK_COLOR: good
           SLACK_USERNAME: ちくわ
           SLACK_WEBHOOK: ${{ secrets.DEV_FANC_API_SLACK_WEBHOOK_URL }}
-          SLACK_MESSAGE: '${{ if eq(job.status, 'failure') }}<!channel>${{ end }}Job ${{ job.status }}. (${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }})'
+          SLACK_MESSAGE: 'Job ${{ job.status }}. (${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }})'
+
+      - name: Slack Notification on Failure
+        uses: rtCamp/action-slack-notify@v2.0.2
+        if: failure()
+        env:
+          SLACK_CHANNEL: dev_fanc_api
+          SLACK_TITLE: デプロイが失敗しました
+          SLACK_COLOR: danger
+          SLACK_USERNAME: ちくわ
+          SLACK_WEBHOOK: ${{ secrets.DEV_FANC_API_SLACK_WEBHOOK_URL }}
+          SLACK_MESSAGE: '<!channel> Job ${{ job.status }}. (${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }})'
+
 
   update-task-definition:
     needs: docker-build-and-push
@@ -133,13 +145,24 @@ jobs:
           TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json "$NEW_TASK_DEFINITION" | jq -r .taskDefinition.taskDefinitionArn)
           aws ecs update-service --cluster $ECS_CLUSTER_NAME --service $ECS_SERVICE_NAME --task-definition $TASK_DEF_ARN
 
-      - name: Slack Notification
-        if: always()
+      - name: Slack Notification on Success
+        if: success()
         uses: rtCamp/action-slack-notify@v2.0.2
         env:
           SLACK_CHANNEL: dev_fanc_api
-          SLACK_TITLE: ${{ if eq(job.status, 'success') }}デプロイが成功しました${{ else }}デプロイが失敗しました${{ end }}
-          SLACK_COLOR: ${{ if eq(job.status, 'success') }}good${{ else }}danger${{ end }}
+          SLACK_TITLE: デプロイが成功しました
+          SLACK_COLOR: good
           SLACK_USERNAME: ちくわ
           SLACK_WEBHOOK: ${{ secrets.DEV_FANC_API_SLACK_WEBHOOK_URL }}
-          SLACK_MESSAGE: '${{ if eq(job.status, 'failure') }}<!channel>${{ end }}Job ${{ job.status }}. (${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }})'
+          SLACK_MESSAGE: 'Job ${{ job.status }}. (${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }})'
+
+      - name: Slack Notification on Failure
+        uses: rtCamp/action-slack-notify@v2.0.2
+        if: failure()
+        env:
+          SLACK_CHANNEL: dev_fanc_api
+          SLACK_TITLE: デプロイが失敗しました
+          SLACK_COLOR: danger
+          SLACK_USERNAME: ちくわ
+          SLACK_WEBHOOK: ${{ secrets.DEV_FANC_API_SLACK_WEBHOOK_URL }}
+          SLACK_MESSAGE: '<!channel> Job ${{ job.status }}. (${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }})'
