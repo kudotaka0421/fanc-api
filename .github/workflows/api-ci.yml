@@ -80,7 +80,7 @@ jobs:
           SLACK_COLOR: ${{ if eq(job.status, 'success') }}good${{ else }}danger${{ end }}
           SLACK_USERNAME: ちくわ
           SLACK_WEBHOOK: ${{ secrets.DEV_FANC_API_SLACK_WEBHOOK_URL }}
-          SLACK_MESSAGE: '${{ if eq(job.status, 'failure') }}<!channel> ${{ end }}Job ${{ job.status }}. (${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }})'
+          SLACK_MESSAGE: '${{ if eq(job.status, 'failure') }}<!channel>${{ end }}Job ${{ job.status }}. (${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }})'
 
   update-task-definition:
     needs: docker-build-and-push
@@ -142,4 +142,4 @@ jobs:
           SLACK_COLOR: ${{ if eq(job.status, 'success') }}good${{ else }}danger${{ end }}
           SLACK_USERNAME: ちくわ
           SLACK_WEBHOOK: ${{ secrets.DEV_FANC_API_SLACK_WEBHOOK_URL }}
-          SLACK_MESSAGE: '${{ if eq(job.status, 'failure') }}<!channel> ${{ end }}Job ${{ job.status }}. (${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }})'
+          SLACK_MESSAGE: '${{ if eq(job.status, 'failure') }}<!channel>${{ end }}Job ${{ job.status }}. (${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }})'
