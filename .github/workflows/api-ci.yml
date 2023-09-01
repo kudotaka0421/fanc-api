@@ -71,6 +71,17 @@ jobs:
           docker build -t $FULL_IMAGE_NAME .
           docker push $FULL_IMAGE_NAME
 
+      - name: Slack Notification
+        if: always()
+        uses: rtCamp/action-slack-notify@v2.0.2
+        env:
+          SLACK_CHANNEL: dev_fanc_api
+          SLACK_TITLE: ${{ if eq(job.status, 'success') }}デプロイが成功しました${{ else }}デプロイが失敗しました${{ end }}
+          SLACK_COLOR: ${{ if eq(job.status, 'success') }}good${{ else }}danger${{ end }}
+          SLACK_USERNAME: ちくわ
+          SLACK_WEBHOOK: ${{ secrets.DEV_FANC_API_SLACK_WEBHOOK_URL }}
+          SLACK_MESSAGE: '${{ if eq(job.status, 'failure') }}<!channel> ${{ end }}Job ${{ job.status }}. (${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }})'
+
   update-task-definition:
     needs: docker-build-and-push
     runs-on: ubuntu-latest
@@ -121,3 +132,14 @@ jobs:
           echo $NEW_TASK_DEFINITION
           TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json "$NEW_TASK_DEFINITION" | jq -r .taskDefinition.taskDefinitionArn)
           aws ecs update-service --cluster $ECS_CLUSTER_NAME --service $ECS_SERVICE_NAME --task-definition $TASK_DEF_ARN
+
+      - name: Slack Notification
+        if: always()
+        uses: rtCamp/action-slack-notify@v2.0.2
+        env:
+          SLACK_CHANNEL: dev_fanc_api
+          SLACK_TITLE: ${{ if eq(job.status, 'success') }}デプロイが成功しました${{ else }}デプロイが失敗しました${{ end }}
+          SLACK_COLOR: ${{ if eq(job.status, 'success') }}good${{ else }}danger${{ end }}
+          SLACK_USERNAME: ちくわ
+          SLACK_WEBHOOK: ${{ secrets.DEV_FANC_API_SLACK_WEBHOOK_URL }}
+          SLACK_MESSAGE: '${{ if eq(job.status, 'failure') }}<!channel> ${{ end }}Job ${{ job.status }}. (${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }})'
