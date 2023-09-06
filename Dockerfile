@@ -11,6 +11,9 @@ COPY go.sum .
 # 依存関係のインストール
 RUN go mod download
 
+# gooseをインストール
+RUN go get -u github.com/pressly/goose/cmd/goose
+
 # ソースコードをコピー
 COPY . .
 
