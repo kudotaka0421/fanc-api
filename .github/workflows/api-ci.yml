@@ -48,6 +48,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      
       - name: Set up AWS CLI
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -68,8 +71,8 @@ jobs:
           if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
             FULL_IMAGE_NAME="$ECR_REGISTRY/fanc-app-stg:$IMAGE_TAG"
           fi
-          docker build -t $FULL_IMAGE_NAME .
-          docker push $FULL_IMAGE_NAME
+          docker buildx create --use
+          docker buildx build --platform linux/arm64 -t $ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG --push .
 
       - name: Slack Notification on Success
         if: success()
