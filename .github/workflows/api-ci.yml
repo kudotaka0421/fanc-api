@@ -47,7 +47,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
       - name: Set up AWS CLI
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -68,8 +71,8 @@ jobs:
           if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
             IMAGE_NAME="fanc-app-stg"
           fi
-          docker build -t $ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
+          docker buildx create --use
+          docker buildx build --platform linux/arm64 -t $ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG --push .
 
   update-task-definition:
     needs: docker-build-and-push
