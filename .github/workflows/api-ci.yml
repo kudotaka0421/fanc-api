@@ -72,7 +72,7 @@ jobs:
             FULL_IMAGE_NAME="$ECR_REGISTRY/fanc-app-stg:$IMAGE_TAG"
           fi
           docker buildx create --use
-          docker buildx build --platform linux/arm64 -t $ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG --push .
+          docker buildx build --platform linux/arm64 -t $FULL_IMAGE_NAME --push .
 
       - name: Slack Notification on Success
         if: success()
