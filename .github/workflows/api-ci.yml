@@ -61,15 +61,38 @@ jobs:
       
       - name: Build, tag, and push image to Amazon ECR
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          IMAGE_NAME="fanc-app"  # default to prod
+          FULL_IMAGE_NAME="$ECR_REGISTRY/fanc-app:$IMAGE_TAG"
           if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
-            IMAGE_NAME="fanc-app-stg"
+            FULL_IMAGE_NAME="$ECR_REGISTRY/fanc-app-stg:$IMAGE_TAG"
           fi
-          docker build -t $ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
+          docker build -t $FULL_IMAGE_NAME .
+          docker push $FULL_IMAGE_NAME
+
+      - name: Slack Notification on Success
+        if: success()
+        uses: rtCamp/action-slack-notify@v2.0.2
+        env:
+          SLACK_CHANNEL: dev_fanc_api
+          SLACK_TITLE: ECRリポジトリの更新に成功しました
+          SLACK_COLOR: good
+          SLACK_USERNAME: ちくわ
+          SLACK_WEBHOOK: ${{ secrets.DEV_FANC_API_SLACK_WEBHOOK_URL }}
+          SLACK_MESSAGE: 'Job ${{ job.status }}. (${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }})'
+
+      - name: Slack Notification on Failure
+        uses: rtCamp/action-slack-notify@v2.0.2
+        if: failure()
+        env:
+          SLACK_CHANNEL: dev_fanc_api
+          SLACK_TITLE: ECRリポジトリの更新に失敗しました
+          SLACK_COLOR: danger
+          SLACK_USERNAME: ちくわ
+          SLACK_WEBHOOK: ${{ secrets.DEV_FANC_API_SLACK_WEBHOOK_URL }}
+          SLACK_MESSAGE: '<!channel> Job ${{ job.status }}. (${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }})'
+
 
   update-task-definition:
     needs: docker-build-and-push
@@ -79,6 +102,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       
+      - name: Check if jq is installed
+        run: |
+          if which jq; then
+            echo "jq is installed"
+          else
+            echo "jq is not installed"
+          fi
+
       - name: Set up AWS CLI
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -86,23 +117,52 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
       - name: Update Amazon ECS service
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           if [ "${{ github.ref }}" == "refs/heads/main" ]; then
             TASK_DEFINITION_NAME="fanc-api-definition-task-prod"
             ECS_SERVICE_NAME="fanc-api-service-prod-6-3"
             ECS_CLUSTER_NAME="fanc-api-cluster-prod"
-            IMAGE_NAME="fanc-app"
+            FULL_IMAGE_NAME="$ECR_REGISTRY/fanc-app:$IMAGE_TAG"
           else
             TASK_DEFINITION_NAME="fanc-api-definition-task-stg"
             ECS_SERVICE_NAME="fanc-api-service-stg"
             ECS_CLUSTER_NAME="fanc-api-cluster-stg"
-            IMAGE_NAME="fanc-app-stg"
+            FULL_IMAGE_NAME="$ECR_REGISTRY/fanc-app-stg:$IMAGE_TAG"
           fi
           CURRENT_TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition $TASK_DEFINITION_NAME --query "taskDefinition" --output json)
-          NEW_TASK_DEFINITION=$(echo $CURRENT_TASK_DEFINITION | jq --arg IMAGE "$ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG" '.containerDefinitions[0].image=$IMAGE')
-          TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json $NEW_TASK_DEFINITION | jq -r .taskDefinition.taskDefinitionArn)
+          echo "Current Task Definition:"
+          echo $CURRENT_TASK_DEFINITION
+          NEW_TASK_DEFINITION=$(echo $CURRENT_TASK_DEFINITION | jq --arg IMAGE "$FULL_IMAGE_NAME" ' .containerDefinitions[0].image=$IMAGE | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
+          echo "New Task Definition:"
+          echo $NEW_TASK_DEFINITION
+          TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json "$NEW_TASK_DEFINITION" | jq -r .taskDefinition.taskDefinitionArn)
           aws ecs update-service --cluster $ECS_CLUSTER_NAME --service $ECS_SERVICE_NAME --task-definition $TASK_DEF_ARN
+
+      - name: Slack Notification on Success
+        if: success()
+        uses: rtCamp/action-slack-notify@v2.0.2
+        env:
+          SLACK_CHANNEL: dev_fanc_api
+          SLACK_TITLE: タスク定義・サービスの更新に成功しました
+          SLACK_COLOR: good
+          SLACK_USERNAME: ちくわ
+          SLACK_WEBHOOK: ${{ secrets.DEV_FANC_API_SLACK_WEBHOOK_URL }}
+          SLACK_MESSAGE: 'Job ${{ job.status }}. (${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }})'
+
+      - name: Slack Notification on Failure
+        uses: rtCamp/action-slack-notify@v2.0.2
+        if: failure()
+        env:
+          SLACK_CHANNEL: dev_fanc_api
+          SLACK_TITLE:  タスク定義・サービスの更新に失敗しました
+          SLACK_COLOR: danger
+          SLACK_USERNAME: ちくわ
+          SLACK_WEBHOOK: ${{ secrets.DEV_FANC_API_SLACK_WEBHOOK_URL }}
+          SLACK_MESSAGE: '<!channel> Job ${{ job.status }}. (${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }})'

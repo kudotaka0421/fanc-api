@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"fanc-api/src/handlers"
-	"fanc-api/src/models"
 	"fanc-api/src/routes"
 
 	"github.com/labstack/echo/v4"
@@ -33,7 +32,6 @@ func main() {
 	mysqlDataBase := os.Getenv("MYSQL_DATABASE")
 	mysqlHost := os.Getenv("MYSQL_HOST")
 	connectionString := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?charset=utf8&parseTime=True&loc=Local", mysqlUser, mysqlPassword, mysqlHost, mysqlDataBase)
-	// connectionString := fmt.Sprintf("%s:%s@tcp(mysql:3306)/%s?charset=utf8&parseTime=True&loc=Local", mysqlUser, mysqlPassword, mysqlDataBase)
 
 	for i := 0; i < 10; i++ {
 		db, err = gorm.Open(mysql.Open(connectionString), &gorm.Config{})
@@ -45,11 +43,6 @@ func main() {
 	}
 
 	if err != nil {
-		e.Logger.Fatal(err)
-	}
-
-	// Migrate the schema
-	if err := db.AutoMigrate(&models.Tag{}, &models.School{}, &models.User{}); err != nil {
 		e.Logger.Fatal(err)
 	}
 

@@ -1,5 +1,5 @@
 # Dockerfile
-FROM golang:1.17
+FROM --platform=linux/amd64 golang:1.17
 
 # ワーキングディレクトリを設定
 WORKDIR /app
@@ -11,11 +11,14 @@ COPY go.sum .
 # 依存関係のインストール
 RUN go mod download
 
+# gooseをインストール
+RUN go get -u github.com/pressly/goose/cmd/goose
+
 # ソースコードをコピー
 COPY . .
 
 # アプリケーションをビルド
-RUN GOOS=linux GOARCH=arm64 go build -o main .
+RUN GOOS=linux GOARCH=amd64 go build -o main .
 
 # ポートをエクスポート
 EXPOSE 8080
