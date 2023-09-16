@@ -29,6 +29,7 @@ func NewAuthHandler(db *gorm.DB) *AuthHandler {
 
 type MeResponse struct {
 	IsAuthenticated bool    `json:"isAuthenticated"`
+	ID              uint    `json:"id"`
 	Name            *string `json:"name"`
 	Email           *string `json:"email"`
 	Role            *int    `json:"role"`
@@ -99,6 +100,7 @@ func (h *AuthHandler) GetMe(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, MeResponse{
 		IsAuthenticated: true,
+		ID:              user.ID,
 		Name:            &user.Name,
 		Email:           &user.Email,
 		Role:            &user.Role,

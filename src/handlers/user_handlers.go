@@ -94,10 +94,10 @@ func GenerateUniqueToken() (string, error) {
 func sendConfirmationEmail(user *models.User) error {
 	m := mail.NewV3Mail()
 
-	from := mail.NewEmail("Example User", "test@example.com")
+	from := mail.NewEmail("Fanc", "fanc2023info@gmail.com")
 	m.SetFrom(from)
 
-	to := mail.NewEmail("User", user.Email)
+	to := mail.NewEmail("", user.Email)
 	p := mail.NewPersonalization()
 	p.AddTos(to)
 
