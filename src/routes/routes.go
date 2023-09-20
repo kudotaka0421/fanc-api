@@ -9,7 +9,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
-func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *handlers.SchoolHandler, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, healthCheckHandler *handlers.HealthCheckHandler) {
+func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *handlers.SchoolHandler, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, healthCheckHandler *handlers.HealthCheckHandler, counselingHandler *handlers.CounselingHandler) {
 	e.GET("/healthcheck", healthCheckHandler.HealthCheck)
 	// Auth
 	// [TODO]/api/userは「/api/signup」として切り分けたい
@@ -54,4 +54,8 @@ func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *h
 	authenticated.GET("/api/school/:school_id", schoolHandler.GetSchoolByID)
 	authenticated.PUT("/api/school/:school_id", schoolHandler.UpdateSchool)
 	authenticated.DELETE("/api/school/:school_id", schoolHandler.DeleteSchool)
+
+	// Counseling
+	authenticated.GET("/api/counseling", counselingHandler.GetCounselings)
+	authenticated.POST("/api/counseling", counselingHandler.CreateCounseling)
 }

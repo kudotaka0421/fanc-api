@@ -21,6 +21,7 @@ type School struct {
 	Recommendations json.RawMessage `gorm:"type:json" json:"recommendations"`
 	Features        json.RawMessage `gorm:"type:json" json:"features"`
 	Tags            []Tag           `gorm:"many2many:school_tags;" json:"tags"`
+	Counselings     []Counseling    `gorm:"many2many:counseling_schools;" json:"-"`
 }
 
 func (s *School) Validate() error {
@@ -30,6 +31,5 @@ func (s *School) Validate() error {
 	if s.MonthlyFee <= 0 {
 		return errors.New("monthly fee must be greater than 0")
 	}
-	// [TODO]add more validation if necessary
 	return nil
 }
