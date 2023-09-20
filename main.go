@@ -48,10 +48,11 @@ func main() {
 
 	tagHandler := handlers.NewTagHandler(db)
 	schoolHandler := handlers.NewSchoolHandler(db)
+	counselingHandler := handlers.NewCounselingHandler(db)
 	userHandler := handlers.NewUserHandler(db)
 	authHandler := handlers.NewAuthHandler(db)
 	healthCheckHandler := handlers.NewHealthCheckHandler()
-	routes.SetupRoutes(e, tagHandler, schoolHandler, userHandler, authHandler, healthCheckHandler)
+	routes.SetupRoutes(e, tagHandler, schoolHandler, userHandler, authHandler, healthCheckHandler, counselingHandler)
 
 	e.Start(":8080")
 }
