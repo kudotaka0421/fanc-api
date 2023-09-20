@@ -56,5 +56,6 @@ func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *h
 	authenticated.DELETE("/api/school/:school_id", schoolHandler.DeleteSchool)
 
 	// Counseling
+	authenticated.GET("/api/counseling", counselingHandler.GetCounselings)
 	authenticated.POST("/api/counseling", counselingHandler.CreateCounseling)
 }

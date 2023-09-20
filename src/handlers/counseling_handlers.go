@@ -30,6 +30,42 @@ type CounselingParams struct {
 	SchoolIds     *[]uint   `json:"schoolIds"`
 }
 
+func (h *CounselingHandler) GetCounselings(c echo.Context) error {
+	counselings := []models.Counseling{}
+
+	if err := h.db.Preload("Schools").Preload("User").Order("date DESC").Find(&counselings).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Failed to retrieve counselings",
+		})
+	}
+
+	counselingsResponse := make([]map[string]interface{}, len(counselings))
+	for i, counseling := range counselings {
+		// Convert counseling.Schools into a slice of school IDs
+		schoolIds := make([]uint, len(counseling.Schools))
+		for j, school := range counseling.Schools {
+			schoolIds[j] = school.ID
+		}
+
+		var jst = time.FixedZone("Asia/Tokyo", 9*60*60)
+		jstDate := counseling.Date.In(jst) // JSTに変換
+
+		counselingsResponse[i] = map[string]interface{}{
+			"id":            counseling.ID,
+			"counseleeName": counseling.CounseleeName,
+			"email":         counseling.Email,
+			"status":        counseling.Status,
+			"date":          jstDate,
+			"remarks":       counseling.Remarks,
+			"message":       counseling.Message,
+			"user":          counseling.User,
+			"schoolIds":     schoolIds,
+		}
+	}
+
+	return c.JSON(http.StatusOK, counselingsResponse)
+}
+
 func (h *CounselingHandler) CreateCounseling(c echo.Context) error {
 	params := new(CounselingParams)
 
