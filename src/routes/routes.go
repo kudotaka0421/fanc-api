@@ -57,5 +57,6 @@ func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *h
 
 	// Counseling
 	authenticated.GET("/api/counseling", counselingHandler.GetCounselings)
+	authenticated.GET("/api/counseling/:counseling_id", counselingHandler.GetCounselingByID)
 	authenticated.POST("/api/counseling", counselingHandler.CreateCounseling)
 }
