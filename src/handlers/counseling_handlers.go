@@ -51,21 +51,54 @@ func (h *CounselingHandler) GetCounselings(c echo.Context) error {
 		jstDate := counseling.Date.In(jst) // JSTに変換
 
 		counselingsResponse[i] = map[string]interface{}{
-			"id":            counseling.ID,
-			"counseleeName": counseling.CounseleeName,
-			"email":         counseling.Email,
-			"status":        counseling.Status,
-			"date":          jstDate,
-			"remarks":       counseling.Remarks,
-			"message":       counseling.Message,
-			"user":          counseling.User,
-			"schoolIds":     schoolIds,
+			"id":                counseling.ID,
+			"counseleeName":     counseling.CounseleeName,
+			"email":             counseling.Email,
+			"status":            counseling.Status,
+			"date":              jstDate,
+			"remarks":           counseling.Remarks,
+			"message":           counseling.Message,
+			"user":              counseling.User,
+			"selectedSchoolIds": schoolIds,
 		}
 	}
 
 	return c.JSON(http.StatusOK, counselingsResponse)
 }
 
+func (h *CounselingHandler) GetCounselingByID(c echo.Context) error {
+	counseling := models.Counseling{}
+	counselingID := c.Param("counseling_id")
+
+	if err := h.db.Preload("Schools").Preload("User").Order("date DESC").Where("id = ?", counselingID).First(&counseling).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Failed to retrieve counselings",
+		})
+	}
+
+	schoolIds := make([]uint, len(counseling.Schools))
+	for j, school := range counseling.Schools {
+		schoolIds[j] = school.ID
+	}
+
+	var jst = time.FixedZone("Asia/Tokyo", 9*60*60)
+	jstDate := counseling.Date.In(jst) // JSTに変換
+
+	counselingsResponse := map[string]interface{}{
+		"id":                counseling.ID,
+		"counseleeName":     counseling.CounseleeName,
+		"email":             counseling.Email,
+		"status":            counseling.Status,
+		"date":              jstDate,
+		"remarks":           counseling.Remarks,
+		"message":           counseling.Message,
+		"user":              counseling.User,
+		"selectedSchoolIds": schoolIds,
+	}
+
+	return c.JSON(http.StatusOK, counselingsResponse)
+
+}
 func (h *CounselingHandler) CreateCounseling(c echo.Context) error {
 	params := new(CounselingParams)
 
