@@ -39,7 +39,7 @@ func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *h
 	authenticated.GET("/api/user/:user_id", userHandler.GetUserByID)
 	authenticated.PUT("/api/user/:user_id", userHandler.UpdateUser)
 	authenticated.DELETE("/api/user/:user_id", userHandler.DeleteUser)
-	// authenticated.POST("/api/confirm-account/:token", userHandler.ConfirmAccount)
+	authenticated.POST("/api/confirm-account/:token", userHandler.ConfirmAccount)
 
 	// Tag
 	authenticated.GET("/api/tag", tagHandler.GetTags)
@@ -59,4 +59,6 @@ func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *h
 	authenticated.GET("/api/counseling", counselingHandler.GetCounselings)
 	authenticated.GET("/api/counseling/:counseling_id", counselingHandler.GetCounselingByID)
 	authenticated.POST("/api/counseling", counselingHandler.CreateCounseling)
+	authenticated.PUT("/api/counseling/:counseling_id", counselingHandler.UpdateCounseling)
+	authenticated.DELETE("/api/counseling/:counseling_id", counselingHandler.DeleteCounseling)
 }
