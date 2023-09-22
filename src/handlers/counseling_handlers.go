@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -296,7 +297,7 @@ func (h *CounselingHandler) sendToSlack(counseling *models.Counseling) error {
 	)
 
 	// [TODO] SlackのIncoming Webhooks URLを環境変数から取得するようにする
-	slackURL := "https://hooks.slack.com/services/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"
+	slackURL := os.Getenv("SLACK_WEBHOOK_COUNSELING_COMPLETION")
 	payload := map[string]interface{}{
 		"text": message,
 	}
