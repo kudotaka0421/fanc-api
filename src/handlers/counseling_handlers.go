@@ -298,7 +298,6 @@ func (h *CounselingHandler) sendToSlack(counseling *models.Counseling) error {
 
 	// [TODO] SlackのIncoming Webhooks URLを環境変数から取得するようにする
 	slackURL := os.Getenv("SLACK_WEBHOOK_COUNSELING_COMPLETION")
-	fmt.Println("Slack URL:", slackURL)
 	payload := map[string]interface{}{
 		"text": message,
 	}
