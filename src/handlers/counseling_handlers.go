@@ -339,8 +339,11 @@ func (h *CounselingHandler) sendCompletionEmail(counseling *models.Counseling) e
 	m.SetFrom(from)
 
 	to := mail.NewEmail("", counseling.Email)
+	cc := mail.NewEmail("", "fanc2023info@gmail.com") // Ccの名前とアドレスを適切に設定してください。
+
 	p := mail.NewPersonalization()
 	p.AddTos(to)
+	p.AddCCs(cc)
 
 	var schools []map[string]interface{}
 	for _, school := range counseling.Schools {
