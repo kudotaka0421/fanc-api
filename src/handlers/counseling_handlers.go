@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/sendgrid/sendgrid-go"
+	"github.com/sendgrid/sendgrid-go/helpers/mail"
 	"gorm.io/gorm"
 )
 
@@ -161,6 +163,11 @@ func (h *CounselingHandler) CreateCounseling(c echo.Context) error {
 		if err := h.sendToSlack(counseling); err != nil {
 			fmt.Println("Failed to send message to Slack:", err)
 		}
+
+		if err := h.sendCompletionEmail(counseling); err != nil {
+			fmt.Println("Failed to send Email:", err)
+		}
+
 	}
 
 	return c.JSON(http.StatusCreated, map[string]string{
@@ -235,6 +242,9 @@ func (h *CounselingHandler) UpdateCounseling(c echo.Context) error {
 	if (existingCounseling.Status == readyStatus || existingCounseling.Status == canceledStatus) && counseling.Status == completedStatus {
 		if err := h.sendToSlack(counseling); err != nil {
 			fmt.Println("Failed to send message to Slack:", err)
+		}
+		if err := h.sendCompletionEmail(counseling); err != nil {
+			fmt.Println("Failed to send Email:", err)
 		}
 	}
 
@@ -315,4 +325,61 @@ func (h *CounselingHandler) sendToSlack(counseling *models.Counseling) error {
 	}
 
 	return nil
+}
+
+func (h *CounselingHandler) sendCompletionEmail(counseling *models.Counseling) error {
+
+	if err := h.db.Preload("User").First(counseling, counseling.ID).Error; err != nil {
+		return err
+	}
+
+	m := mail.NewV3Mail()
+
+	from := mail.NewEmail("Fanc", "fanc2023info@gmail.com")
+	m.SetFrom(from)
+
+	to := mail.NewEmail("", counseling.Email)
+	p := mail.NewPersonalization()
+	p.AddTos(to)
+
+	var schools []map[string]interface{}
+	for _, school := range counseling.Schools {
+		schools = append(schools, map[string]interface{}{
+			"name":       school.Name,
+			"imageLinks": school.ImageLinks,
+		})
+	}
+
+	// メッセージ内の改行を <br> タグに置き換える
+	if counseling.Message != nil {
+		formattedMessage := strings.ReplaceAll(*counseling.Message, "\n", "<br>")
+		p.SetDynamicTemplateData("message", formattedMessage)
+	} else {
+		p.SetDynamicTemplateData("message", "")
+	}
+
+	fmt.Println("schools:", schools)
+
+	p.SetDynamicTemplateData("staffName", counseling.User.Name)
+
+	p.SetDynamicTemplateData("schools", schools)
+
+	m.AddPersonalizations(p)
+
+	m.SetTemplateID("d-f0751b9524a84e81b7fb9dbdcef5fde5")
+
+	sendgridClient := sendgrid.NewSendClient(os.Getenv("SENDGRID_API_KEY"))
+
+	response, err := sendgridClient.Send(m)
+	if err != nil {
+		return err
+	}
+
+	// レスポンスのステータスコードが成功（2xx）でなければエラーを返す
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return fmt.Errorf("Failed to send email: %v", response.Body)
+	}
+
+	return nil
+
 }
