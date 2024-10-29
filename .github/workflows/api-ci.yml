@@ -1,11 +1,12 @@
 name: API CI
 
-on:
-  push:
-    branches:
-      - main
-      - develop
-  pull_request:
+# AWSを停止しているため一時的にコメントアウト
+# on:
+#   push:
+#     branches:
+#       - main
+#       - develop
+#   pull_request:
 
 jobs:
   build:
