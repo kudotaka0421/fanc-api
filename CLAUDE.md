@@ -4,7 +4,7 @@ PitaScho（オンラインカウンセリング相談予約サービス）のカ
 
 ## 技術スタック
 
-- **言語**: Go 1.20
+- **言語**: Go 1.24
 - **Web フレームワーク**: Echo v4.10
 - **ORM**: GORM v1.25
 - **DB**: MySQL 8.0（ドライバ: go-sql-driver/mysql）
@@ -13,6 +13,7 @@ PitaScho（オンラインカウンセリング相談予約サービス）のカ
 - **メール送信**: SendGrid
 - **マイグレーション**: goose（SQL ファイル形式）
 - **暗号化**: golang.org/x/crypto
+- **AWS SDK**: aws-sdk-go-v2（lab 用。S3 presigned multipart など）
 
 ## ディレクトリ構造
 
@@ -61,6 +62,12 @@ db/
 - JWT 保護: `GET /api/me`
 - リソース CRUD: `/api/tag`, `/api/school`, `/api/user`, `/api/counseling`
 - ヘルスチェック: `GET /healthcheck`
+- Lab (学習用、認証なし、LocalStack 前提):
+  - `POST /api/lab/s3/multipart/create` — multipart upload 開始、uploadId と key を返す
+  - `POST /api/lab/s3/multipart/sign-part` — 指定パートの presigned PUT URL 発行
+  - `POST /api/lab/s3/multipart/complete` — ETag 集計し upload 確定
+  - `POST /api/lab/s3/multipart/abort` — upload 中止（ゴミパート破棄）
+  - `GET  /api/lab/s3/objects` — アップロード済みファイル一覧
 
 main.go では CORS ミドルウェアを適用し、MySQL 接続を最大 10 回・5 秒間隔でリトライ。
 
@@ -71,6 +78,12 @@ main.go では CORS ミドルウェアを適用し、MySQL 接続を最大 10 �
 - `SENDGRID_API_KEY`
 - `CORS_ALLOW_ORIGIN`
 - `SLACK_WEBHOOK_COUNSELING_COMPLETION`
+- Lab 用（`make up-lab` で docker-compose.lab.yml が注入）:
+  - `AWS_ENDPOINT_URL` — backend → LocalStack 内部通信用 (`http://localstack:4566`)
+  - `AWS_PUBLIC_ENDPOINT_URL` — ブラウザ向け presigned URL 生成用 (`http://localhost:4566`)
+  - `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
+  - `LAB_S3_BUCKET`（既定 `lab-uploads`）
+  - `POSTGRES_DSN`, `REDIS_ADDR`
 
 ## CI/CD
 

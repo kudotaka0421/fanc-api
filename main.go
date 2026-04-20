@@ -21,6 +21,7 @@ func main() {
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{os.Getenv("CORS_ALLOW_ORIGIN")},
 		AllowMethods: []string{echo.GET, echo.PUT, echo.POST, echo.DELETE},
+		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
 	}))
 
 	// Initialize GORM
@@ -52,7 +53,15 @@ func main() {
 	userHandler := handlers.NewUserHandler(db)
 	authHandler := handlers.NewAuthHandler(db)
 	healthCheckHandler := handlers.NewHealthCheckHandler()
-	routes.SetupRoutes(e, tagHandler, schoolHandler, userHandler, authHandler, healthCheckHandler, counselingHandler)
+
+	// Lab 用ハンドラは LocalStack (AWS_ENDPOINT_URL) が無くても初期化自体は成功する
+	// 実際の S3 呼び出し時に LocalStack へ到達できなければエラーになる
+	labS3Handler, err := handlers.NewLabS3Handler()
+	if err != nil {
+		e.Logger.Warnf("lab s3 handler init failed, /api/lab/s3/* disabled: %s", err.Error())
+	}
+
+	routes.SetupRoutes(e, tagHandler, schoolHandler, userHandler, authHandler, healthCheckHandler, counselingHandler, labS3Handler)
 
 	e.Start(":8080")
 }
