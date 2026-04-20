@@ -1,0 +1,28 @@
+#!/bin/bash
+set -e
+
+# LocalStack 起動時に実行される初期化スクリプト。
+# SQS キュー、SNS トピック、S3 バケットを用意する。
+
+ENDPOINT=http://localhost:4566
+REGION=ap-northeast-1
+
+echo "[init] creating S3 buckets"
+awslocal s3 mb s3://lab-uploads --region "$REGION"
+awslocal s3 mb s3://lab-lambda --region "$REGION"
+
+echo "[init] creating SQS queues"
+awslocal sqs create-queue --queue-name lab-primary --region "$REGION"
+awslocal sqs create-queue --queue-name lab-audit   --region "$REGION"
+awslocal sqs create-queue --queue-name lab-dlq     --region "$REGION"
+
+echo "[init] creating SNS topic"
+TOPIC_ARN=$(awslocal sns create-topic --name lab-events --region "$REGION" --query 'TopicArn' --output text)
+PRIMARY_ARN=$(awslocal sqs get-queue-attributes --queue-url "$ENDPOINT/000000000000/lab-primary" --attribute-names QueueArn --region "$REGION" --query 'Attributes.QueueArn' --output text)
+AUDIT_ARN=$(awslocal sqs get-queue-attributes   --queue-url "$ENDPOINT/000000000000/lab-audit"   --attribute-names QueueArn --region "$REGION" --query 'Attributes.QueueArn' --output text)
+
+echo "[init] subscribing SQS queues to SNS topic"
+awslocal sns subscribe --topic-arn "$TOPIC_ARN" --protocol sqs --notification-endpoint "$PRIMARY_ARN" --attributes RawMessageDelivery=true --region "$REGION"
+awslocal sns subscribe --topic-arn "$TOPIC_ARN" --protocol sqs --notification-endpoint "$AUDIT_ARN"   --attributes RawMessageDelivery=true --region "$REGION"
+
+echo "[init] done"
