@@ -55,13 +55,17 @@ func main() {
 	healthCheckHandler := handlers.NewHealthCheckHandler()
 
 	// Lab 用ハンドラは LocalStack (AWS_ENDPOINT_URL) が無くても初期化自体は成功する
-	// 実際の S3 呼び出し時に LocalStack へ到達できなければエラーになる
+	// 実際の S3/SQS 呼び出し時に LocalStack へ到達できなければエラーになる
 	labS3Handler, err := handlers.NewLabS3Handler()
 	if err != nil {
 		e.Logger.Warnf("lab s3 handler init failed, /api/lab/s3/* disabled: %s", err.Error())
 	}
+	labSQSHandler, err := handlers.NewLabSQSHandler()
+	if err != nil {
+		e.Logger.Warnf("lab sqs handler init failed, /api/lab/sqs/* disabled: %s", err.Error())
+	}
 
-	routes.SetupRoutes(e, tagHandler, schoolHandler, userHandler, authHandler, healthCheckHandler, counselingHandler, labS3Handler)
+	routes.SetupRoutes(e, tagHandler, schoolHandler, userHandler, authHandler, healthCheckHandler, counselingHandler, labS3Handler, labSQSHandler)
 
 	e.Start(":8080")
 }

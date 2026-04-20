@@ -9,17 +9,21 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
-func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *handlers.SchoolHandler, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, healthCheckHandler *handlers.HealthCheckHandler, counselingHandler *handlers.CounselingHandler, labS3Handler *handlers.LabS3Handler) {
+func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *handlers.SchoolHandler, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, healthCheckHandler *handlers.HealthCheckHandler, counselingHandler *handlers.CounselingHandler, labS3Handler *handlers.LabS3Handler, labSQSHandler *handlers.LabSQSHandler) {
 	e.GET("/healthcheck", healthCheckHandler.HealthCheck)
 
 	// Lab (学習用、認証なし)。LocalStack 前提でローカル環境のみ使用する。
+	lab := e.Group("/api/lab")
 	if labS3Handler != nil {
-		lab := e.Group("/api/lab")
 		lab.GET("/s3/objects", labS3Handler.ListObjects)
 		lab.POST("/s3/multipart/create", labS3Handler.CreateMultipart)
 		lab.POST("/s3/multipart/sign-part", labS3Handler.SignPart)
 		lab.POST("/s3/multipart/complete", labS3Handler.CompleteMultipart)
 		lab.POST("/s3/multipart/abort", labS3Handler.AbortMultipart)
+	}
+	if labSQSHandler != nil {
+		lab.POST("/sqs/publish", labSQSHandler.Publish)
+		lab.GET("/sqs/stats", labSQSHandler.Stats)
 	}
 	// Auth
 	// [TODO]/api/userは「/api/signup」として切り分けたい

@@ -37,6 +37,21 @@ awslocal sqs create-queue --queue-name lab-primary --region "$REGION"
 awslocal sqs create-queue --queue-name lab-audit   --region "$REGION"
 awslocal sqs create-queue --queue-name lab-dlq     --region "$REGION"
 
+echo "[init] wiring redrive policy: lab-primary → lab-dlq after 3 failed receives"
+# DLQ の ARN を取得してから、primary に「maxReceiveCount=3 を超えたら DLQ に送る」
+# という RedrivePolicy を設定する。worker が "fail" を含むメッセージを消し損ねた
+# 時の挙動観察に使う（visibility timeout 切れ × 3 回 → DLQ 行き）
+REDRIVE_DLQ_ARN=$(awslocal sqs get-queue-attributes --queue-url "$ENDPOINT/000000000000/lab-dlq" --attribute-names QueueArn --region "$REGION" --query 'Attributes.QueueArn' --output text)
+cat > /tmp/sqs-redrive.json <<EOF
+{
+  "RedrivePolicy": "{\"deadLetterTargetArn\":\"$REDRIVE_DLQ_ARN\",\"maxReceiveCount\":\"3\"}"
+}
+EOF
+awslocal sqs set-queue-attributes \
+  --queue-url "$ENDPOINT/000000000000/lab-primary" \
+  --attributes file:///tmp/sqs-redrive.json \
+  --region "$REGION"
+
 echo "[init] creating SNS topic"
 TOPIC_ARN=$(awslocal sns create-topic --name lab-events --region "$REGION" --query 'TopicArn' --output text)
 PRIMARY_ARN=$(awslocal sqs get-queue-attributes --queue-url "$ENDPOINT/000000000000/lab-primary" --attribute-names QueueArn --region "$REGION" --query 'Attributes.QueueArn' --output text)

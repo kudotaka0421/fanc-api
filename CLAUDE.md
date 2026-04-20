@@ -21,9 +21,12 @@ PitaScho（オンラインカウンセリング相談予約サービス）のカ
 
 ```
 src/
-├── handlers/     HTTP ハンドラー層（auth, user, tag, school, counseling, health_check）
+├── handlers/     HTTP ハンドラー層（auth, user, tag, school, counseling, health_check, lab_s3, lab_sqs）
 ├── models/       DB モデル層（user, tag, schools, school_tag, counseling）
 └── routes/       ルーティング設定（routes.go）
+
+cmd/
+└── worker/       lab 用 SQS worker バイナリ（別プロセス起動）
 
 db/
 └── migrations/   goose 用 SQL マイグレーション
@@ -68,6 +71,10 @@ db/
   - `POST /api/lab/s3/multipart/complete` — ETag 集計し upload 確定
   - `POST /api/lab/s3/multipart/abort` — upload 中止（ゴミパート破棄）
   - `GET  /api/lab/s3/objects` — アップロード済みファイル一覧
+  - `POST /api/lab/sqs/publish` — lab-primary へメッセージ送信
+  - `GET  /api/lab/sqs/stats` — primary / dlq の概算メッセージ数
+
+lab 用の SQS worker は `cmd/worker` 配下に別バイナリとしてあり、docker-compose.lab.yml の `worker` サービスで起動する。`lab-primary` を long polling で受信し、"fail" を含むメッセージは削除せず redrive policy (maxReceiveCount=3) で DLQ へ送る挙動を観察できる。
 
 main.go では CORS ミドルウェアを適用し、MySQL 接続を最大 10 回・5 秒間隔でリトライ。
 
@@ -83,6 +90,7 @@ main.go では CORS ミドルウェアを適用し、MySQL 接続を最大 10 �
   - `AWS_PUBLIC_ENDPOINT_URL` — ブラウザ向け presigned URL 生成用 (`http://localhost:4566`)
   - `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
   - `LAB_S3_BUCKET`（既定 `lab-uploads`）
+  - `LAB_SQS_PRIMARY_URL`, `LAB_SQS_DLQ_URL`
   - `POSTGRES_DSN`, `REDIS_ADDR`
 
 ## CI/CD

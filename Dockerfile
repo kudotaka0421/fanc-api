@@ -17,8 +17,9 @@ RUN go mod download
 # ソースコードをコピー
 COPY . .
 
-# アプリケーションをビルド
-RUN GOOS=linux GOARCH=amd64 go build -o main .
+# アプリケーションをビルド（API 本体と lab worker バイナリの両方）
+RUN GOOS=linux GOARCH=amd64 go build -o main . \
+ && GOOS=linux GOARCH=amd64 go build -o worker ./cmd/worker
 
 # ポートをエクスポート
 EXPOSE 8080
