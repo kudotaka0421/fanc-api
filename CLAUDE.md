@@ -4,7 +4,7 @@ PitaScho（オンラインカウンセリング相談予約サービス）のカ
 
 ## 技術スタック
 
-- **言語**: Go 1.20（go.mod）/ Dockerfile は Go 1.17 — バージョン不一致あり
+- **言語**: Go 1.20
 - **Web フレームワーク**: Echo v4.10
 - **ORM**: GORM v1.25
 - **DB**: MySQL 8.0（ドライバ: go-sql-driver/mysql）
@@ -36,9 +36,24 @@ db/
 |------|---------|
 | ビルド | `go build -o main .` |
 | 起動 | `./main`（ポート 8080） |
-| ローカル起動（DB 込み） | `docker-compose up` |
+| ローカル起動（最小: MySQL + backend） | `make up` |
+| ローカル起動（lab 用 LocalStack / Postgres / Redis 込み） | `make up-lab` |
+| 停止 | `make down` |
+| ログ追従 | `make logs` |
 
 ※ CI にテストステップの定義はあるが、実装は空。
+
+## lab トピック用の追加サービス
+
+`docker-compose.lab.yml` が以下を追加する：
+
+| サービス | 用途 | ホスト側ポート |
+|---------|-----|----------|
+| LocalStack | S3 / SQS / SNS / Lambda | 4566 |
+| Postgres | RLS / パーティショニング / bulk | 5433 |
+| Redis | Cache-Aside | 6379 |
+
+初期化は `scripts/init-localstack.sh`（SQS キュー / SNS トピック / S3 バケット作成）と `scripts/init-postgres.sql` が自動実行する。
 
 ## API 概要
 

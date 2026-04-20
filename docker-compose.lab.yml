@@ -1,0 +1,57 @@
+# lab 用の追加サービス。使い方:
+#   docker compose -f docker-compose.yml -f docker-compose.lab.yml up -d
+#
+# 既存のローカル開発 (MySQL + backend) に加えて、以下を起動する:
+#   - LocalStack (S3/SQS/SNS/Lambda)
+#   - PostgreSQL (RLS / パーティショニング / bulk 用、既存 MySQL と併存)
+#   - Redis (Cache-Aside 用)
+#
+# ポート衝突回避などの個人設定は docker-compose.override.yml を別に用意する。
+
+services:
+  backend:
+    environment:
+      AWS_ENDPOINT_URL: http://localstack:4566
+      AWS_REGION: ap-northeast-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      POSTGRES_DSN: postgres://lab:lab@postgres:5432/lab?sslmode=disable
+      REDIS_ADDR: redis:6379
+    depends_on:
+      - mysql
+      - localstack
+      - postgres
+      - redis
+
+  localstack:
+    image: localstack/localstack:3.8
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: s3,sqs,sns,lambda
+      DEBUG: "0"
+      DEFAULT_REGION: ap-northeast-1
+      LAMBDA_EXECUTOR: docker
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./scripts/init-localstack.sh:/etc/localstack/init/ready.d/init.sh
+
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: lab
+      POSTGRES_PASSWORD: lab
+      POSTGRES_DB: lab
+    volumes:
+      - postgres-lab-data:/var/lib/postgresql/data
+      - ./scripts/init-postgres.sql:/docker-entrypoint-initdb.d/init.sql
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres-lab-data:
