@@ -9,7 +9,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
-func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *handlers.SchoolHandler, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, healthCheckHandler *handlers.HealthCheckHandler, counselingHandler *handlers.CounselingHandler, labS3Handler *handlers.LabS3Handler, labSQSHandler *handlers.LabSQSHandler) {
+func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *handlers.SchoolHandler, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, healthCheckHandler *handlers.HealthCheckHandler, counselingHandler *handlers.CounselingHandler, labS3Handler *handlers.LabS3Handler, labSQSHandler *handlers.LabSQSHandler, labSNSHandler *handlers.LabSNSHandler) {
 	e.GET("/healthcheck", healthCheckHandler.HealthCheck)
 
 	// Lab (学習用、認証なし)。LocalStack 前提でローカル環境のみ使用する。
@@ -21,6 +21,10 @@ func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *h
 	if labSQSHandler != nil {
 		lab.POST("/sqs/publish", labSQSHandler.Publish)
 		lab.GET("/sqs/stats", labSQSHandler.Stats)
+	}
+	if labSNSHandler != nil {
+		lab.POST("/sns/publish", labSNSHandler.PublishToTopic)
+		lab.GET("/sns/stats", labSNSHandler.FanoutStats)
 	}
 	// Auth
 	// [TODO]/api/userは「/api/signup」として切り分けたい
