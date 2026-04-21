@@ -11,6 +11,27 @@ echo "[init] creating S3 buckets"
 awslocal s3 mb s3://lab-uploads --region "$REGION"
 awslocal s3 mb s3://lab-lambda --region "$REGION"
 
+echo "[init] configuring S3 CORS on lab-uploads (required for browser PUT)"
+# ブラウザが presigned URL に直接 PUT するため CORS 設定が必要。
+# ExposeHeaders に ETag を含めないとフロント側で Complete 時の ETag が拾えない。
+cat > /tmp/lab-uploads-cors.json <<'EOF'
+{
+  "CORSRules": [
+    {
+      "AllowedOrigins": ["*"],
+      "AllowedMethods": ["PUT", "GET", "HEAD", "POST"],
+      "AllowedHeaders": ["*"],
+      "ExposeHeaders": ["ETag"],
+      "MaxAgeSeconds": 3000
+    }
+  ]
+}
+EOF
+awslocal s3api put-bucket-cors \
+  --bucket lab-uploads \
+  --cors-configuration file:///tmp/lab-uploads-cors.json \
+  --region "$REGION"
+
 echo "[init] creating SQS queues"
 awslocal sqs create-queue --queue-name lab-primary --region "$REGION"
 awslocal sqs create-queue --queue-name lab-audit   --region "$REGION"

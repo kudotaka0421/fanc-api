@@ -9,8 +9,15 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
-func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *handlers.SchoolHandler, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, healthCheckHandler *handlers.HealthCheckHandler, counselingHandler *handlers.CounselingHandler) {
+func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *handlers.SchoolHandler, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, healthCheckHandler *handlers.HealthCheckHandler, counselingHandler *handlers.CounselingHandler, labS3Handler *handlers.LabS3Handler) {
 	e.GET("/healthcheck", healthCheckHandler.HealthCheck)
+
+	// Lab (学習用、認証なし)。LocalStack 前提でローカル環境のみ使用する。
+	if labS3Handler != nil {
+		lab := e.Group("/api/lab")
+		lab.GET("/s3/objects", labS3Handler.ListObjects)
+		lab.POST("/s3/presign-put", labS3Handler.PresignPut)
+	}
 	// Auth
 	// [TODO]/api/userは「/api/signup」として切り分けたい
 	e.POST("/api/login", authHandler.Login)
