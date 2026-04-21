@@ -63,11 +63,12 @@ db/
 - リソース CRUD: `/api/tag`, `/api/school`, `/api/user`, `/api/counseling`
 - ヘルスチェック: `GET /healthcheck`
 - Lab (学習用、認証なし、LocalStack 前提):
-  - `POST /api/lab/s3/multipart/create` — multipart upload 開始、uploadId と key を返す
-  - `POST /api/lab/s3/multipart/sign-part` — 指定パートの presigned PUT URL 発行
-  - `POST /api/lab/s3/multipart/complete` — ETag 集計し upload 確定
-  - `POST /api/lab/s3/multipart/abort` — upload 中止（ゴミパート破棄）
+  - `POST /api/lab/s3/presign-put` — PutObject 用 presigned URL を 15 分有効で発行
   - `GET  /api/lab/s3/objects` — アップロード済みファイル一覧
+
+  方式選択の背景（A=backend 経由 / B=presigned single PUT / C=multipart）は
+  `~/.claude/docs/interview/system-design/file-upload-patterns.md` を参照。
+  本 lab は B2B SaaS 想定で B を採用。
 
 main.go では CORS ミドルウェアを適用し、MySQL 接続を最大 10 回・5 秒間隔でリトライ。
 

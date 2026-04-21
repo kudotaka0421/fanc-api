@@ -10,22 +10,22 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/labstack/echo/v4"
 )
 
-// LabS3Handler は S3 の multipart upload を presigned URL 方式で扱う lab 用ハンドラ。
-// 内部用クライアント（backend → localstack）と、presign で使う公開エンドポイント用
-// クライアントを分けて持つ。前者は CreateMultipartUpload / Complete / List など
-// サーバーから直接 S3 を叩く用途、後者はブラウザが直接 PUT するための URL 生成用。
+// LabS3Handler は S3 への presigned PUT（single）方式アップロードを扱う lab 用ハンドラ。
+// B2B SaaS の請求書・経費・領収書程度のサイズ（< 100 MB）を想定し、multipart を避けて
+// 実装を最小化する方針。方式比較の詳細は
+// ~/.claude/docs/interview/system-design/file-upload-patterns.md を参照。
 type LabS3Handler struct {
-	client        *s3.Client
 	presignClient *s3.PresignClient
+	client        *s3.Client
 	bucket        string
 }
 
-// NewLabS3Handler は環境変数から S3 クライアントを初期化する。
-// LocalStack 利用時は AWS_ENDPOINT_URL / AWS_PUBLIC_ENDPOINT_URL を分けて設定する。
+// NewLabS3Handler は内部用 S3 クライアントと、ブラウザ向け presigned URL 発行用
+// クライアントをそれぞれ初期化する。LocalStack 利用時は backend から見える
+// `localstack:4566` とブラウザから見える `localhost:4566` が異なるため分離が必要。
 func NewLabS3Handler() (*LabS3Handler, error) {
 	ctx := context.Background()
 	cfg, err := awsconfig.LoadDefaultConfig(ctx,
@@ -48,11 +48,10 @@ func NewLabS3Handler() (*LabS3Handler, error) {
 		o.BaseEndpoint = aws.String(publicEndpoint)
 		o.UsePathStyle = true
 	})
-	presignClient := s3.NewPresignClient(presignSource)
 
 	return &LabS3Handler{
 		client:        internalClient,
-		presignClient: presignClient,
+		presignClient: s3.NewPresignClient(presignSource),
 		bucket:        getenv("LAB_S3_BUCKET", "lab-uploads"),
 	}, nil
 }
@@ -64,19 +63,20 @@ func getenv(key, fallback string) string {
 	return fallback
 }
 
-type createMultipartReq struct {
+type presignPutReq struct {
 	Filename    string `json:"filename"`
 	ContentType string `json:"contentType"`
 }
 
-type createMultipartRes struct {
-	UploadID string `json:"uploadId"`
-	Key      string `json:"key"`
+type presignPutRes struct {
+	URL string `json:"url"`
+	Key string `json:"key"`
 }
 
-// CreateMultipart は multipart upload を開始し uploadId とオブジェクト key を返す。
-func (h *LabS3Handler) CreateMultipart(c echo.Context) error {
-	var req createMultipartReq
+// PresignPut は PutObject 用の presigned URL を 15 分有効で発行する。
+// ブラウザはこの URL に対してファイル全体を 1 回の PUT で送る。
+func (h *LabS3Handler) PresignPut(c echo.Context) error {
+	var req presignPutReq
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -85,109 +85,15 @@ func (h *LabS3Handler) CreateMultipart(c echo.Context) error {
 	}
 	key := fmt.Sprintf("uploads/%s-%s", time.Now().UTC().Format("20060102-150405"), req.Filename)
 
-	out, err := h.client.CreateMultipartUpload(c.Request().Context(), &s3.CreateMultipartUploadInput{
+	presigned, err := h.presignClient.PresignPutObject(c.Request().Context(), &s3.PutObjectInput{
 		Bucket:      aws.String(h.bucket),
 		Key:         aws.String(key),
 		ContentType: aws.String(req.ContentType),
-	})
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-	}
-	return c.JSON(http.StatusOK, createMultipartRes{
-		UploadID: aws.ToString(out.UploadId),
-		Key:      key,
-	})
-}
-
-type signPartReq struct {
-	Key        string `json:"key"`
-	UploadID   string `json:"uploadId"`
-	PartNumber int32  `json:"partNumber"`
-}
-
-type signPartRes struct {
-	URL string `json:"url"`
-}
-
-// SignPart は指定パート番号の UploadPart 用 presigned URL（PUT）を 15 分有効で返す。
-func (h *LabS3Handler) SignPart(c echo.Context) error {
-	var req signPartReq
-	if err := c.Bind(&req); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-	presigned, err := h.presignClient.PresignUploadPart(c.Request().Context(), &s3.UploadPartInput{
-		Bucket:     aws.String(h.bucket),
-		Key:        aws.String(req.Key),
-		UploadId:   aws.String(req.UploadID),
-		PartNumber: aws.Int32(req.PartNumber),
 	}, s3.WithPresignExpires(15*time.Minute))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
-	return c.JSON(http.StatusOK, signPartRes{URL: presigned.URL})
-}
-
-type completePart struct {
-	PartNumber int32  `json:"partNumber"`
-	ETag       string `json:"eTag"`
-}
-
-type completeReq struct {
-	Key      string         `json:"key"`
-	UploadID string         `json:"uploadId"`
-	Parts    []completePart `json:"parts"`
-}
-
-type completeRes struct {
-	Location string `json:"location"`
-}
-
-// CompleteMultipart は各パートの ETag を結合して multipart upload を確定する。
-func (h *LabS3Handler) CompleteMultipart(c echo.Context) error {
-	var req completeReq
-	if err := c.Bind(&req); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-	parts := make([]types.CompletedPart, 0, len(req.Parts))
-	for _, p := range req.Parts {
-		parts = append(parts, types.CompletedPart{
-			PartNumber: aws.Int32(p.PartNumber),
-			ETag:       aws.String(p.ETag),
-		})
-	}
-	out, err := h.client.CompleteMultipartUpload(c.Request().Context(), &s3.CompleteMultipartUploadInput{
-		Bucket:          aws.String(h.bucket),
-		Key:             aws.String(req.Key),
-		UploadId:        aws.String(req.UploadID),
-		MultipartUpload: &types.CompletedMultipartUpload{Parts: parts},
-	})
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-	}
-	return c.JSON(http.StatusOK, completeRes{Location: aws.ToString(out.Location)})
-}
-
-type abortReq struct {
-	Key      string `json:"key"`
-	UploadID string `json:"uploadId"`
-}
-
-// AbortMultipart は未完了の multipart upload を中止する。
-// 放置するとパートが S3 にゴミとして残り課金されるため、失敗時は必ず呼ぶ。
-func (h *LabS3Handler) AbortMultipart(c echo.Context) error {
-	var req abortReq
-	if err := c.Bind(&req); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-	_, err := h.client.AbortMultipartUpload(c.Request().Context(), &s3.AbortMultipartUploadInput{
-		Bucket:   aws.String(h.bucket),
-		Key:      aws.String(req.Key),
-		UploadId: aws.String(req.UploadID),
-	})
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-	}
-	return c.JSON(http.StatusOK, map[string]bool{"ok": true})
+	return c.JSON(http.StatusOK, presignPutRes{URL: presigned.URL, Key: key})
 }
 
 type objectItem struct {
