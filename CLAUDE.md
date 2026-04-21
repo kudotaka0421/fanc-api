@@ -70,12 +70,14 @@ db/
   - `GET  /api/lab/s3/objects` — アップロード済みファイル一覧
   - `POST /api/lab/sqs/publish` — lab-primary へメッセージ送信
   - `GET  /api/lab/sqs/stats` — primary / dlq の概算メッセージ数
+  - `POST /api/lab/sns/publish` — lab-events topic に publish → lab-primary / lab-audit へ fanout
+  - `GET  /api/lab/sns/stats` — primary / audit の概算メッセージ数
 
-lab 用の SQS worker は `cmd/worker` 配下に別バイナリとしてあり、docker-compose.lab.yml の `worker` サービスで起動する。`lab-primary` を long polling で受信し、"fail" を含むメッセージは削除せず redrive policy (maxReceiveCount=3) で DLQ へ送る挙動を観察できる。
+lab 用の SQS worker は `cmd/worker` 配下に別バイナリとしてあり、docker-compose.lab.yml の `worker` サービスで起動する。1 プロセス内で **2 goroutine が primary / audit を独立に long polling** する構造で、SNS → SQS fanout の両キュー同時消費を観察できる。"fail" を含むメッセージは削除せず redrive policy (maxReceiveCount=3) で DLQ へ送る挙動も観察可能。
 
-  方式選択の背景（A=backend 経由 / B=presigned single PUT / C=multipart）は
-  `~/.claude/docs/interview/system-design/file-upload-patterns.md` を参照。
-  本 lab は B2B SaaS 想定で B を採用。
+  ナレッジ集:
+  - ファイルアップロード方式 (A/B/C): `~/.claude/docs/interview/system-design/file-upload-patterns.md`
+  - SQS 運用ノウハウ（VisibilityTimeout / DLQ / スケール）: `~/.claude/docs/interview/system-design/sqs-essentials.md`
 
 main.go では CORS ミドルウェアを適用し、MySQL 接続を最大 10 回・5 秒間隔でリトライ。
 
@@ -91,7 +93,8 @@ main.go では CORS ミドルウェアを適用し、MySQL 接続を最大 10 �
   - `AWS_PUBLIC_ENDPOINT_URL` — ブラウザ向け presigned URL 生成用 (`http://localhost:4566`)
   - `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
   - `LAB_S3_BUCKET`（既定 `lab-uploads`）
-  - `LAB_SQS_PRIMARY_URL`, `LAB_SQS_DLQ_URL`
+  - `LAB_SQS_PRIMARY_URL`, `LAB_SQS_AUDIT_URL`, `LAB_SQS_DLQ_URL`
+  - `LAB_SNS_TOPIC_ARN`（既定 `arn:aws:sns:ap-northeast-1:000000000000:lab-events`）
   - `POSTGRES_DSN`, `REDIS_ADDR`
 
 ## CI/CD

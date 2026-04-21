@@ -64,8 +64,12 @@ func main() {
 	if err != nil {
 		e.Logger.Warnf("lab sqs handler init failed, /api/lab/sqs/* disabled: %s", err.Error())
 	}
+	labSNSHandler, err := handlers.NewLabSNSHandler()
+	if err != nil {
+		e.Logger.Warnf("lab sns handler init failed, /api/lab/sns/* disabled: %s", err.Error())
+	}
 
-	routes.SetupRoutes(e, tagHandler, schoolHandler, userHandler, authHandler, healthCheckHandler, counselingHandler, labS3Handler, labSQSHandler)
+	routes.SetupRoutes(e, tagHandler, schoolHandler, userHandler, authHandler, healthCheckHandler, counselingHandler, labS3Handler, labSQSHandler, labSNSHandler)
 
 	e.Start(":8080")
 }

@@ -1,7 +1,9 @@
 // Package main は lab 用の SQS worker バイナリ。
-// docker-compose.lab.yml の worker サービスで起動し、lab-primary を long polling する。
+// docker-compose.lab.yml の worker サービスで起動し、lab-primary / lab-audit を
+// long polling する。1 プロセス内で 2 goroutine が別キューを独立に消費する構造で、
+// SNS → SQS fanout の両キュー同時消費を観察できる。
 // メッセージ本文に "fail" を含む場合は DeleteMessage を呼ばず、visibility timeout 切れ
-// による再配信を発生させる（redrive policy により maxReceiveCount 到達で DLQ に移る）。
+// による再配信を発生させる（primary の redrive policy により maxReceiveCount 到達で DLQ に移る）。
 package main
 
 import (
@@ -10,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -35,36 +38,54 @@ func main() {
 		}
 	})
 
-	queueURL := getenv("LAB_SQS_PRIMARY_URL", "http://localstack:4566/000000000000/lab-primary")
-	log.Printf("worker: starting, polling %s", queueURL)
+	queues := []struct {
+		label string
+		url   string
+	}{
+		{"primary", getenv("LAB_SQS_PRIMARY_URL", "http://localstack:4566/000000000000/lab-primary")},
+		{"audit", getenv("LAB_SQS_AUDIT_URL", "http://localstack:4566/000000000000/lab-audit")},
+	}
 
+	var wg sync.WaitGroup
+	for _, q := range queues {
+		wg.Add(1)
+		go func(label, url string) {
+			defer wg.Done()
+			pollLoop(ctx, client, label, url)
+		}(q.label, q.url)
+	}
+	wg.Wait()
+	log.Println("worker: shutdown")
+}
+
+// pollLoop は 1 キュー分の long polling ループ。SIGTERM で ctx がキャンセルされるまで回る。
+func pollLoop(ctx context.Context, client *sqs.Client, label, queueURL string) {
+	log.Printf("[%s] worker starting, polling %s", label, queueURL)
 	for ctx.Err() == nil {
 		out, err := client.ReceiveMessage(ctx, &sqs.ReceiveMessageInput{
 			QueueUrl:            aws.String(queueURL),
 			MaxNumberOfMessages: 10,
 			// long polling: メッセージが無ければ最大 20 秒サーバー側で待つ
-			// 空ポーリングによる無駄なリクエストと料金を抑える基本設定
 			WaitTimeSeconds: 20,
 			// 処理中は他 worker から見えないようにする。この時間内に DeleteMessage
-			// を呼ばないと再配信される（失敗扱い）
+			// を呼ばないと再配信される
 			VisibilityTimeout: 10,
 		})
 		if err != nil {
 			if ctx.Err() != nil {
-				break
+				return
 			}
-			log.Printf("receive error: %v", err)
+			log.Printf("[%s] receive error: %v", label, err)
 			time.Sleep(1 * time.Second)
 			continue
 		}
 		for _, msg := range out.Messages {
 			body := aws.ToString(msg.Body)
-			log.Printf("worker: received: %s", body)
-			// ダミー処理（1 秒のウェイト）
-			time.Sleep(1 * time.Second)
+			log.Printf("[%s] received: %s", label, body)
+			time.Sleep(1 * time.Second) // ダミー処理
 
 			if strings.Contains(body, "fail") {
-				log.Printf("worker: simulated failure for %q — skipping delete → redelivery", body)
+				log.Printf("[%s] simulated failure for %q — skipping delete → redelivery", label, body)
 				continue
 			}
 
@@ -73,13 +94,12 @@ func main() {
 				ReceiptHandle: msg.ReceiptHandle,
 			})
 			if err != nil {
-				log.Printf("delete error: %v", err)
+				log.Printf("[%s] delete error: %v", label, err)
 				continue
 			}
-			log.Printf("worker: processed: %s", body)
+			log.Printf("[%s] processed: %s", label, body)
 		}
 	}
-	log.Println("worker: shutdown")
 }
 
 func getenv(key, fallback string) string {
