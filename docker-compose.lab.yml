@@ -22,6 +22,7 @@ services:
       LAB_SQS_AUDIT_URL: http://localstack:4566/000000000000/lab-audit
       LAB_SQS_DLQ_URL: http://localstack:4566/000000000000/lab-dlq
       LAB_SNS_TOPIC_ARN: arn:aws:sns:ap-northeast-1:000000000000:lab-events
+      LAB_LAMBDA_BUCKET: lab-lambda
     depends_on:
       - mysql
       - localstack
@@ -71,6 +72,24 @@ services:
       LAB_SQS_AUDIT_URL: http://localstack:4566/000000000000/lab-audit
     depends_on:
       - localstack
+
+  # lab 用 Lambda デプロイの一回限りサービス。
+  # Go Lambda を build → zip → LocalStack に create-function → S3 イベント通知設定、
+  # を実行してから exit する (restart: "no")。
+  # init-localstack.sh に寄せなかったのは、LocalStack 本体コンテナに Go ツールチェインを
+  # 持ち込みたくないため (docker-compose 側で builder stage 分離する方がクリーン)。
+  lambda-deployer:
+    build:
+      context: .
+      dockerfile: cmd/lambda/Dockerfile
+    environment:
+      AWS_ENDPOINT_URL: http://localstack:4566
+      AWS_REGION: ap-northeast-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    depends_on:
+      - localstack
+    restart: "no"
 
 volumes:
   postgres-lab-data:

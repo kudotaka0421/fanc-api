@@ -9,7 +9,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
-func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *handlers.SchoolHandler, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, healthCheckHandler *handlers.HealthCheckHandler, counselingHandler *handlers.CounselingHandler, labS3Handler *handlers.LabS3Handler, labSQSHandler *handlers.LabSQSHandler, labSNSHandler *handlers.LabSNSHandler) {
+func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *handlers.SchoolHandler, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, healthCheckHandler *handlers.HealthCheckHandler, counselingHandler *handlers.CounselingHandler, labS3Handler *handlers.LabS3Handler, labSQSHandler *handlers.LabSQSHandler, labSNSHandler *handlers.LabSNSHandler, labLambdaHandler *handlers.LabLambdaHandler) {
 	e.GET("/healthcheck", healthCheckHandler.HealthCheck)
 
 	// Lab (学習用、認証なし)。LocalStack 前提でローカル環境のみ使用する。
@@ -25,6 +25,11 @@ func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *h
 	if labSNSHandler != nil {
 		lab.POST("/sns/publish", labSNSHandler.PublishToTopic)
 		lab.GET("/sns/stats", labSNSHandler.FanoutStats)
+	}
+	if labLambdaHandler != nil {
+		lab.POST("/lambda/presign-put", labLambdaHandler.PresignPut)
+		lab.GET("/lambda/uploads", labLambdaHandler.ListUploads)
+		lab.GET("/lambda/results", labLambdaHandler.ListResults)
 	}
 	// Auth
 	// [TODO]/api/userは「/api/signup」として切り分けたい

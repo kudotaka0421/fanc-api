@@ -9,6 +9,9 @@ REGION=ap-northeast-1
 
 echo "[init] creating S3 buckets"
 awslocal s3 mb s3://lab-uploads --region "$REGION"
+# lab-lambda バケットは #4 Lambda 用。uploads/ への PutObject を
+# トリガーに Lambda が起動し、results/ に処理結果 JSON を書き戻す。
+# 実際の CORS 設定やイベント通知は scripts/deploy-lambda.sh (lambda-deployer サービス) が行う。
 awslocal s3 mb s3://lab-lambda --region "$REGION"
 
 echo "[init] configuring S3 CORS on lab-uploads (required for browser PUT)"
