@@ -72,8 +72,12 @@ func main() {
 	if err != nil {
 		e.Logger.Warnf("lab lambda handler init failed, /api/lab/lambda/* disabled: %s", err.Error())
 	}
+	labCacheHandler, err := handlers.NewLabCacheHandler(db)
+	if err != nil {
+		e.Logger.Warnf("lab cache handler init failed, /api/lab/cache/* disabled: %s", err.Error())
+	}
 
-	routes.SetupRoutes(e, tagHandler, schoolHandler, userHandler, authHandler, healthCheckHandler, counselingHandler, labS3Handler, labSQSHandler, labSNSHandler, labLambdaHandler)
+	routes.SetupRoutes(e, tagHandler, schoolHandler, userHandler, authHandler, healthCheckHandler, counselingHandler, labS3Handler, labSQSHandler, labSNSHandler, labLambdaHandler, labCacheHandler)
 
 	e.Start(":8080")
 }
