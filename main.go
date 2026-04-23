@@ -80,8 +80,12 @@ func main() {
 	if err != nil {
 		e.Logger.Warnf("lab rls handler init failed, /api/lab/rls/* disabled: %s", err.Error())
 	}
+	labPartitionHandler, err := handlers.NewLabPartitionHandler()
+	if err != nil {
+		e.Logger.Warnf("lab partition handler init failed, /api/lab/partition disabled: %s", err.Error())
+	}
 
-	routes.SetupRoutes(e, tagHandler, schoolHandler, userHandler, authHandler, healthCheckHandler, counselingHandler, labS3Handler, labSQSHandler, labSNSHandler, labLambdaHandler, labCacheHandler, labRLSHandler)
+	routes.SetupRoutes(e, tagHandler, schoolHandler, userHandler, authHandler, healthCheckHandler, counselingHandler, labS3Handler, labSQSHandler, labSNSHandler, labLambdaHandler, labCacheHandler, labRLSHandler, labPartitionHandler)
 
 	e.Start(":8080")
 }
