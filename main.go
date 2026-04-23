@@ -21,7 +21,7 @@ func main() {
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{os.Getenv("CORS_ALLOW_ORIGIN")},
 		AllowMethods: []string{echo.GET, echo.PUT, echo.POST, echo.DELETE},
-		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
+		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization, "X-Tenant-Id"},
 	}))
 
 	// Initialize GORM
@@ -76,8 +76,12 @@ func main() {
 	if err != nil {
 		e.Logger.Warnf("lab cache handler init failed, /api/lab/cache/* disabled: %s", err.Error())
 	}
+	labRLSHandler, err := handlers.NewLabRLSHandler()
+	if err != nil {
+		e.Logger.Warnf("lab rls handler init failed, /api/lab/rls/* disabled: %s", err.Error())
+	}
 
-	routes.SetupRoutes(e, tagHandler, schoolHandler, userHandler, authHandler, healthCheckHandler, counselingHandler, labS3Handler, labSQSHandler, labSNSHandler, labLambdaHandler, labCacheHandler)
+	routes.SetupRoutes(e, tagHandler, schoolHandler, userHandler, authHandler, healthCheckHandler, counselingHandler, labS3Handler, labSQSHandler, labSNSHandler, labLambdaHandler, labCacheHandler, labRLSHandler)
 
 	e.Start(":8080")
 }
