@@ -1,5 +1,5 @@
 # Dockerfile
-FROM --platform=linux/amd64 golang:1.24
+FROM --platform=linux/amd64 golang:1.25
 
 # ワーキングディレクトリを設定
 WORKDIR /app

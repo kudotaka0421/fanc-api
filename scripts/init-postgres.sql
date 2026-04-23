@@ -65,3 +65,57 @@ INSERT INTO samples (org_id, body) VALUES
     ('22222222-2222-2222-2222-222222222222', 'Globex: 領収書 Z')
 ON CONFLICT DO NOTHING;
 COMMIT;
+
+-- ============================================================
+-- #7 Postgres パーティショニング
+-- 月次 RANGE パーティション。パーティションキーは event_at。
+-- 日付範囲クエリで「触らないパーティション」が EXPLAIN から消えること
+-- (partition pruning) を目視するのが狙い。
+-- ポイント: パーティションキーは PRIMARY KEY に含める必要がある
+-- (Postgres の UNIQUE 制約は全パーティション横断で enforce できないため)。
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS events (
+    id       uuid        NOT NULL DEFAULT gen_random_uuid(),
+    event_at timestamptz NOT NULL,
+    body     text        NOT NULL,
+    PRIMARY KEY (id, event_at)
+) PARTITION BY RANGE (event_at);
+
+-- 2025-11 〜 2026-04 の 6 ヶ月ぶんをあらかじめ作っておく。
+-- 本番では pg_partman などで自動作成するのが定石だが lab では固定で十分。
+CREATE TABLE IF NOT EXISTS events_2025_11 PARTITION OF events
+    FOR VALUES FROM ('2025-11-01') TO ('2025-12-01');
+CREATE TABLE IF NOT EXISTS events_2025_12 PARTITION OF events
+    FOR VALUES FROM ('2025-12-01') TO ('2026-01-01');
+CREATE TABLE IF NOT EXISTS events_2026_01 PARTITION OF events
+    FOR VALUES FROM ('2026-01-01') TO ('2026-02-01');
+CREATE TABLE IF NOT EXISTS events_2026_02 PARTITION OF events
+    FOR VALUES FROM ('2026-02-01') TO ('2026-03-01');
+CREATE TABLE IF NOT EXISTS events_2026_03 PARTITION OF events
+    FOR VALUES FROM ('2026-03-01') TO ('2026-04-01');
+CREATE TABLE IF NOT EXISTS events_2026_04 PARTITION OF events
+    FOR VALUES FROM ('2026-04-01') TO ('2026-05-01');
+-- 範囲外の INSERT を受け止めるための default パーティション。
+-- default があるとクエリ時に pruning できないケースもあるため、
+-- 運用では "default を使わず事前に partition を作る" のが推奨。
+-- 本 lab では範囲外データが入らないことの観察用に置くだけ。
+CREATE TABLE IF NOT EXISTS events_default PARTITION OF events DEFAULT;
+
+-- 親テーブルに CREATE INDEX すると全パーティションに cascade される (PG11+)。
+CREATE INDEX IF NOT EXISTS events_event_at_idx ON events (event_at);
+
+-- 1 万件の seed。2025-11-01 から 180 日ぶんの一様分布。
+-- 同じ初期化スクリプトが 2 回走ると 2 倍投入されてしまうので、既に入っていれば skip する。
+DO $$
+BEGIN
+    IF (SELECT count(*) FROM events) = 0 THEN
+        INSERT INTO events (event_at, body)
+        SELECT
+            '2025-11-01 00:00:00+00'::timestamptz + (random() * 180 * interval '1 day'),
+            'event #' || g
+        FROM generate_series(1, 10000) AS g;
+    END IF;
+END $$;
+
+ANALYZE events;
