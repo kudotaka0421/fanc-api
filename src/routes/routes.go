@@ -9,7 +9,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
-func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *handlers.SchoolHandler, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, healthCheckHandler *handlers.HealthCheckHandler, counselingHandler *handlers.CounselingHandler, labS3Handler *handlers.LabS3Handler, labSQSHandler *handlers.LabSQSHandler, labSNSHandler *handlers.LabSNSHandler, labLambdaHandler *handlers.LabLambdaHandler, labCacheHandler *handlers.LabCacheHandler, labRLSHandler *handlers.LabRLSHandler, labPartitionHandler *handlers.LabPartitionHandler) {
+func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *handlers.SchoolHandler, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, healthCheckHandler *handlers.HealthCheckHandler, counselingHandler *handlers.CounselingHandler, labS3Handler *handlers.LabS3Handler, labSQSHandler *handlers.LabSQSHandler, labSNSHandler *handlers.LabSNSHandler, labLambdaHandler *handlers.LabLambdaHandler, labCacheHandler *handlers.LabCacheHandler, labRLSHandler *handlers.LabRLSHandler, labPartitionHandler *handlers.LabPartitionHandler, labBulkHandler *handlers.LabBulkHandler) {
 	e.GET("/healthcheck", healthCheckHandler.HealthCheck)
 
 	// Lab (学習用、認証なし)。LocalStack 前提でローカル環境のみ使用する。
@@ -42,6 +42,10 @@ func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *h
 	}
 	if labPartitionHandler != nil {
 		lab.GET("/partition", labPartitionHandler.Query)
+	}
+	if labBulkHandler != nil {
+		lab.POST("/bulk", labBulkHandler.Import)
+		lab.GET("/bulk/count", labBulkHandler.Count)
 	}
 	// Auth
 	// [TODO]/api/userは「/api/signup」として切り分けたい

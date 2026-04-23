@@ -78,6 +78,8 @@ db/
   - `GET  /api/lab/rls/samples` — `X-Tenant-Id` ヘッダ → `SET LOCAL app.current_org_id` で samples 一覧取得（RLS policy で自動絞り込み）
   - `POST /api/lab/rls/samples` — samples 追加。`WITH CHECK` により他テナント org_id の INSERT は弾かれる
   - `GET  /api/lab/partition` — `?from=YYYY-MM-DD&to=YYYY-MM-DD` で events (月次 RANGE パーティション、1 万件 seed) を絞り込み、件数・EXPLAIN ANALYZE・scan された partition 名一覧を返す（partition pruning の可視化）
+  - `POST /api/lab/bulk` — `file` (CSV: `name,email,score`) + `method` (`copy` / `insert`) を受け取り `bulk_samples` に投入。TRUNCATE 後に実行し、所要時間 / 行数 / rows per ms を返す（pgx.CopyFrom vs INSERT ループの比較）
+  - `GET  /api/lab/bulk/count` — `bulk_samples` の現在件数
 
 lab 用の SQS worker は `cmd/worker` 配下に別バイナリとしてあり、docker-compose.lab.yml の `worker` サービスで起動する。1 プロセス内で **2 goroutine が primary / audit を独立に long polling** する構造で、SNS → SQS fanout の両キュー同時消費を観察できる。"fail" を含むメッセージは削除せず redrive policy (maxReceiveCount=3) で DLQ へ送る挙動も観察可能。
 
@@ -89,6 +91,7 @@ lab 用の SQS worker は `cmd/worker` 配下に別バイナリとしてあり�
   - Redis Cache-Aside: `~/.claude/docs/interview/system-design/cache-aside-essentials.md`
   - Postgres RLS（tenant isolation）: `~/.claude/docs/interview/system-design/postgres-rls-essentials.md`
   - Postgres パーティショニング（partition pruning）: `~/.claude/docs/interview/system-design/postgres-partition-essentials.md`
+  - Postgres bulk ingest（COPY vs INSERT ループ）: `~/.claude/docs/interview/system-design/fanc-lab/08-postgres-bulk.md`
 
 main.go では CORS ミドルウェアを適用し、MySQL 接続を最大 10 回・5 秒間隔でリトライ。
 
