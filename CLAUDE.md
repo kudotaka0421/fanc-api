@@ -74,6 +74,9 @@ db/
   - `GET  /api/lab/sns/stats` — primary / audit の概算メッセージ数
   - `GET  /api/lab/cache/schools` — Redis Cache-Aside（HIT/MISS/elapsedMs を返却、TTL 60s、DB 側に 300ms 擬似遅延）
   - `DELETE /api/lab/cache/schools` — キャッシュ key 削除
+  - `GET  /api/lab/rls/tenants` — RLS デモ用テナント一覧（UI ドロップダウン用）
+  - `GET  /api/lab/rls/samples` — `X-Tenant-Id` ヘッダ → `SET LOCAL app.current_org_id` で samples 一覧取得（RLS policy で自動絞り込み）
+  - `POST /api/lab/rls/samples` — samples 追加。`WITH CHECK` により他テナント org_id の INSERT は弾かれる
 
 lab 用の SQS worker は `cmd/worker` 配下に別バイナリとしてあり、docker-compose.lab.yml の `worker` サービスで起動する。1 プロセス内で **2 goroutine が primary / audit を独立に long polling** する構造で、SNS → SQS fanout の両キュー同時消費を観察できる。"fail" を含むメッセージは削除せず redrive policy (maxReceiveCount=3) で DLQ へ送る挙動も観察可能。
 
@@ -83,6 +86,7 @@ lab 用の SQS worker は `cmd/worker` 配下に別バイナリとしてあり�
   - SNS → SQS fanout: `~/.claude/docs/interview/system-design/sns-fanout-essentials.md`
   - S3 起点 Lambda: `~/.claude/docs/interview/system-design/s3-lambda-essentials.md`
   - Redis Cache-Aside: `~/.claude/docs/interview/system-design/cache-aside-essentials.md`
+  - Postgres RLS（tenant isolation）: `~/.claude/docs/interview/system-design/postgres-rls-essentials.md`
 
 main.go では CORS ミドルウェアを適用し、MySQL 接続を最大 10 回・5 秒間隔でリトライ。
 
