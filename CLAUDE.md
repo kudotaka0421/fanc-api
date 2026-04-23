@@ -82,7 +82,7 @@ lab 用の SQS worker は `cmd/worker` 配下に別バイナリとしてあり�
   - SQS 運用ノウハウ（VisibilityTimeout / DLQ / スケール）: `~/.claude/docs/interview/system-design/sqs-essentials.md`
   - SNS → SQS fanout: `~/.claude/docs/interview/system-design/sns-fanout-essentials.md`
   - S3 起点 Lambda: `~/.claude/docs/interview/system-design/s3-lambda-essentials.md`
-  - Redis Cache-Aside: `~/.claude/docs/interview/system-design/fanc-lab/5-cache-aside.md`
+  - Redis Cache-Aside: `~/.claude/docs/interview/system-design/cache-aside-essentials.md`
 
 main.go では CORS ミドルウェアを適用し、MySQL 接続を最大 10 回・5 秒間隔でリトライ。
 
