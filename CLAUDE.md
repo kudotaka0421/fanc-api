@@ -80,6 +80,10 @@ db/
   - `GET  /api/lab/partition` — `?from=YYYY-MM-DD&to=YYYY-MM-DD` で events (月次 RANGE パーティション、1 万件 seed) を絞り込み、件数・EXPLAIN ANALYZE・scan された partition 名一覧を返す（partition pruning の可視化）
   - `POST /api/lab/bulk` — `file` (CSV: `name,email,score`) + `method` (`copy` / `insert`) を受け取り `bulk_samples` に投入。TRUNCATE 後に実行し、所要時間 / 行数 / rows per ms を返す（pgx.CopyFrom vs INSERT ループの比較）
   - `GET  /api/lab/bulk/count` — `bulk_samples` の現在件数
+  - `GET  /api/lab/breaker/call` — `sony/gobreaker` を通して同プロセス内 mock upstream を HTTP 呼び出し。`ok`, `source` (`upstream`/`breaker`), `state`, `counts` を返す
+  - `GET  /api/lab/breaker/state` — 現在の state / counts / failMode / 状態遷移履歴
+  - `POST /api/lab/breaker/toggle-fail` — mock upstream の失敗モードを反転（ON の間は mock が 500 を返す）
+  - `GET  /api/lab/breaker/mock` — breaker の保護対象となる mock upstream（fail mode では 500、通常は 200）
 
 lab 用の SQS worker は `cmd/worker` 配下に別バイナリとしてあり、docker-compose.lab.yml の `worker` サービスで起動する。1 プロセス内で **2 goroutine が primary / audit を独立に long polling** する構造で、SNS → SQS fanout の両キュー同時消費を観察できる。"fail" を含むメッセージは削除せず redrive policy (maxReceiveCount=3) で DLQ へ送る挙動も観察可能。
 
@@ -92,6 +96,7 @@ lab 用の SQS worker は `cmd/worker` 配下に別バイナリとしてあり�
   - Postgres RLS（tenant isolation）: `~/.claude/docs/interview/system-design/postgres-rls-essentials.md`
   - Postgres パーティショニング（partition pruning）: `~/.claude/docs/interview/system-design/postgres-partition-essentials.md`
   - Postgres bulk ingest（個別 / multi-row / COPY / staging の使い分け）: `~/.claude/docs/interview/system-design/postgres-bulk-essentials.md`
+  - Circuit Breaker（Closed/Open/Half-Open と閾値設計）: `~/.claude/docs/interview/system-design/circuit-breaker-essentials.md`
 
 main.go では CORS ミドルウェアを適用し、MySQL 接続を最大 10 回・5 秒間隔でリトライ。
 

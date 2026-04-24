@@ -88,8 +88,12 @@ func main() {
 	if err != nil {
 		e.Logger.Warnf("lab bulk handler init failed, /api/lab/bulk disabled: %s", err.Error())
 	}
+	labBreakerHandler, err := handlers.NewLabBreakerHandler()
+	if err != nil {
+		e.Logger.Warnf("lab breaker handler init failed, /api/lab/breaker/* disabled: %s", err.Error())
+	}
 
-	routes.SetupRoutes(e, tagHandler, schoolHandler, userHandler, authHandler, healthCheckHandler, counselingHandler, labS3Handler, labSQSHandler, labSNSHandler, labLambdaHandler, labCacheHandler, labRLSHandler, labPartitionHandler, labBulkHandler)
+	routes.SetupRoutes(e, tagHandler, schoolHandler, userHandler, authHandler, healthCheckHandler, counselingHandler, labS3Handler, labSQSHandler, labSNSHandler, labLambdaHandler, labCacheHandler, labRLSHandler, labPartitionHandler, labBulkHandler, labBreakerHandler)
 
 	e.Start(":8080")
 }
