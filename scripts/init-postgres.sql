@@ -119,3 +119,18 @@ BEGIN
 END $$;
 
 ANALYZE events;
+
+-- ============================================================
+-- #8 Postgres Bulk
+-- pgx.CopyFrom (COPY FROM STDIN) と 1 件ずつ INSERT のループを比較するための
+-- 投入先テーブル。CSV から読んだレコードを素直に入れるだけの狭いスキーマ。
+-- ベンチ時に TRUNCATE してから投入し、所要時間を UI で比較する。
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS bulk_samples (
+    id         bigserial   PRIMARY KEY,
+    name       text        NOT NULL,
+    email      text        NOT NULL,
+    score      int         NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now()
+);

@@ -84,8 +84,12 @@ func main() {
 	if err != nil {
 		e.Logger.Warnf("lab partition handler init failed, /api/lab/partition disabled: %s", err.Error())
 	}
+	labBulkHandler, err := handlers.NewLabBulkHandler()
+	if err != nil {
+		e.Logger.Warnf("lab bulk handler init failed, /api/lab/bulk disabled: %s", err.Error())
+	}
 
-	routes.SetupRoutes(e, tagHandler, schoolHandler, userHandler, authHandler, healthCheckHandler, counselingHandler, labS3Handler, labSQSHandler, labSNSHandler, labLambdaHandler, labCacheHandler, labRLSHandler, labPartitionHandler)
+	routes.SetupRoutes(e, tagHandler, schoolHandler, userHandler, authHandler, healthCheckHandler, counselingHandler, labS3Handler, labSQSHandler, labSNSHandler, labLambdaHandler, labCacheHandler, labRLSHandler, labPartitionHandler, labBulkHandler)
 
 	e.Start(":8080")
 }
