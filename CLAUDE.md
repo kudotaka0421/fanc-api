@@ -91,7 +91,7 @@ lab 用の SQS worker は `cmd/worker` 配下に別バイナリとしてあり�
   - Redis Cache-Aside: `~/.claude/docs/interview/system-design/cache-aside-essentials.md`
   - Postgres RLS（tenant isolation）: `~/.claude/docs/interview/system-design/postgres-rls-essentials.md`
   - Postgres パーティショニング（partition pruning）: `~/.claude/docs/interview/system-design/postgres-partition-essentials.md`
-  - Postgres bulk ingest（COPY vs INSERT ループ）: `~/.claude/docs/interview/system-design/fanc-lab/08-postgres-bulk.md`
+  - Postgres bulk ingest（個別 / multi-row / COPY / staging の使い分け）: `~/.claude/docs/interview/system-design/postgres-bulk-essentials.md`
 
 main.go では CORS ミドルウェアを適用し、MySQL 接続を最大 10 回・5 秒間隔でリトライ。
 
