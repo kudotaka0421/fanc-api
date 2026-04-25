@@ -84,6 +84,9 @@ db/
   - `GET  /api/lab/breaker/state` — 現在の state / counts / failMode / 状態遷移履歴
   - `POST /api/lab/breaker/toggle-fail` — mock upstream の失敗モードを反転（ON の間は mock が 500 を返す）
   - `GET  /api/lab/breaker/mock` — breaker の保護対象となる mock upstream（fail mode では 500、通常は 200）
+  - `GET  /api/lab/realtime/stream` — SSE エンドポイント（`text/event-stream`）。1 接続 = 1 subscriber。15s 毎に `:hb` ハートビート
+  - `POST /api/lab/realtime/publish` — `{message}` を全 subscriber に fan-out。レスポンスで配信数 / drop 数を返す
+  - `GET  /api/lab/realtime/stats` — 現在の subscriber 数 / 累計送信件数
 
 lab 用の SQS worker は `cmd/worker` 配下に別バイナリとしてあり、docker-compose.lab.yml の `worker` サービスで起動する。1 プロセス内で **2 goroutine が primary / audit を独立に long polling** する構造で、SNS → SQS fanout の両キュー同時消費を観察できる。"fail" を含むメッセージは削除せず redrive policy (maxReceiveCount=3) で DLQ へ送る挙動も観察可能。
 
@@ -97,6 +100,7 @@ lab 用の SQS worker は `cmd/worker` 配下に別バイナリとしてあり�
   - Postgres パーティショニング（partition pruning）: `~/.claude/docs/interview/system-design/postgres-partition-essentials.md`
   - Postgres bulk ingest（個別 / multi-row / COPY / staging の使い分け）: `~/.claude/docs/interview/system-design/postgres-bulk-essentials.md`
   - Circuit Breaker（Closed/Open/Half-Open と閾値設計）: `~/.claude/docs/interview/system-design/circuit-breaker-essentials.md`
+  - SSE（broker fan-out / heartbeat / WebSocket との比較）: `~/.claude/docs/interview/system-design/sse-essentials.md`
 
 main.go では CORS ミドルウェアを適用し、MySQL 接続を最大 10 回・5 秒間隔でリトライ。
 

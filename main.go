@@ -92,8 +92,12 @@ func main() {
 	if err != nil {
 		e.Logger.Warnf("lab breaker handler init failed, /api/lab/breaker/* disabled: %s", err.Error())
 	}
+	labRealtimeHandler, err := handlers.NewLabRealtimeHandler()
+	if err != nil {
+		e.Logger.Warnf("lab realtime handler init failed, /api/lab/realtime/* disabled: %s", err.Error())
+	}
 
-	routes.SetupRoutes(e, tagHandler, schoolHandler, userHandler, authHandler, healthCheckHandler, counselingHandler, labS3Handler, labSQSHandler, labSNSHandler, labLambdaHandler, labCacheHandler, labRLSHandler, labPartitionHandler, labBulkHandler, labBreakerHandler)
+	routes.SetupRoutes(e, tagHandler, schoolHandler, userHandler, authHandler, healthCheckHandler, counselingHandler, labS3Handler, labSQSHandler, labSNSHandler, labLambdaHandler, labCacheHandler, labRLSHandler, labPartitionHandler, labBulkHandler, labBreakerHandler, labRealtimeHandler)
 
 	e.Start(":8080")
 }
