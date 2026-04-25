@@ -52,6 +52,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.18 // indirect
 	github.com/sendgrid/rest v2.6.9+incompatible // indirect
+	github.com/sony/gobreaker/v2 v2.4.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
