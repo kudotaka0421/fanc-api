@@ -9,7 +9,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
-func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *handlers.SchoolHandler, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, healthCheckHandler *handlers.HealthCheckHandler, counselingHandler *handlers.CounselingHandler, labS3Handler *handlers.LabS3Handler, labSQSHandler *handlers.LabSQSHandler, labSNSHandler *handlers.LabSNSHandler, labLambdaHandler *handlers.LabLambdaHandler, labCacheHandler *handlers.LabCacheHandler, labRLSHandler *handlers.LabRLSHandler, labPartitionHandler *handlers.LabPartitionHandler, labBulkHandler *handlers.LabBulkHandler, labBreakerHandler *handlers.LabBreakerHandler, labRealtimeHandler *handlers.LabRealtimeHandler) {
+func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *handlers.SchoolHandler, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, healthCheckHandler *handlers.HealthCheckHandler, counselingHandler *handlers.CounselingHandler, labS3Handler *handlers.LabS3Handler, labSQSHandler *handlers.LabSQSHandler, labSNSHandler *handlers.LabSNSHandler, labLambdaHandler *handlers.LabLambdaHandler, labCacheHandler *handlers.LabCacheHandler, labRLSHandler *handlers.LabRLSHandler, labPartitionHandler *handlers.LabPartitionHandler, labBulkHandler *handlers.LabBulkHandler, labBreakerHandler *handlers.LabBreakerHandler, labRealtimeHandler *handlers.LabRealtimeHandler, labPprofHandler *handlers.LabPprofHandler) {
 	e.GET("/healthcheck", healthCheckHandler.HealthCheck)
 
 	// Lab (学習用、認証なし)。LocalStack 前提でローカル環境のみ使用する。
@@ -57,6 +57,14 @@ func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *h
 		lab.GET("/realtime/stream", labRealtimeHandler.Stream)
 		lab.POST("/realtime/publish", labRealtimeHandler.Publish)
 		lab.GET("/realtime/stats", labRealtimeHandler.Stats)
+	}
+	if labPprofHandler != nil {
+		lab.GET("/pprof/heavy", labPprofHandler.Heavy)
+		lab.POST("/pprof/heap-leak", labPprofHandler.HeapLeakStart)
+		lab.DELETE("/pprof/heap-leak", labPprofHandler.HeapLeakReset)
+		lab.POST("/pprof/goroutine-leak", labPprofHandler.GoroutineLeak)
+		lab.DELETE("/pprof/goroutine-leak", labPprofHandler.StopGoroutines)
+		lab.GET("/pprof/runtime", labPprofHandler.Runtime)
 	}
 	// Auth
 	// [TODO]/api/userは「/api/signup」として切り分けたい

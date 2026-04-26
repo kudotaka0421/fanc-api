@@ -56,6 +56,7 @@ db/
 | LocalStack | S3 / SQS / SNS / Lambda | 4566 |
 | Postgres | RLS / パーティショニング / bulk | 5433 |
 | Redis | Cache-Aside | 6379 |
+| backend (pprof) | `LAB_PPROF_ENABLED=true` で `:6060` に `net/http/pprof` を expose | 6060 |
 
 初期化は `scripts/init-localstack.sh`（SQS キュー / SNS トピック / S3 バケット作成）と `scripts/init-postgres.sql` が自動実行する。
 
@@ -87,6 +88,7 @@ db/
   - `GET  /api/lab/realtime/stream` — SSE エンドポイント（`text/event-stream`）。1 接続 = 1 subscriber。15s 毎に `:hb` ハートビート
   - `POST /api/lab/realtime/publish` — `{message}` を全 subscriber に fan-out。レスポンスで配信数 / drop 数を返す
   - `GET  /api/lab/realtime/stats` — 現在の subscriber 数 / 累計送信件数
+  - `GET  /api/lab/pprof/heavy` — `?n=N` (デフォルト 1, 上限 200) で SHA-256 を回す CPU bound な処理を実行。pprof で flame graph を観察するための負荷源
 
 lab 用の SQS worker は `cmd/worker` 配下に別バイナリとしてあり、docker-compose.lab.yml の `worker` サービスで起動する。1 プロセス内で **2 goroutine が primary / audit を独立に long polling** する構造で、SNS → SQS fanout の両キュー同時消費を観察できる。"fail" を含むメッセージは削除せず redrive policy (maxReceiveCount=3) で DLQ へ送る挙動も観察可能。
 
@@ -101,6 +103,7 @@ lab 用の SQS worker は `cmd/worker` 配下に別バイナリとしてあり�
   - Postgres bulk ingest（個別 / multi-row / COPY / staging の使い分け）: `~/.claude/docs/interview/system-design/postgres-bulk-essentials.md`
   - Circuit Breaker（Closed/Open/Half-Open と閾値設計）: `~/.claude/docs/interview/system-design/circuit-breaker-essentials.md`
   - SSE（broker fan-out / heartbeat / WebSocket との比較）: `~/.claude/docs/interview/system-design/sse-essentials.md`
+  - pprof（CPU/heap profile / flame graph / 本番運用ガード）: `docs/lab-pprof-usage.md`（fanc-api 内）
 
 main.go では CORS ミドルウェアを適用し、MySQL 接続を最大 10 回・5 秒間隔でリトライ。
 

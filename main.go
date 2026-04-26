@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"net/http"
+	_ "net/http/pprof" // /debug/pprof/* を default mux に登録（lab 用、:6060 で expose）
 	"os"
 	"time"
 
@@ -96,8 +98,23 @@ func main() {
 	if err != nil {
 		e.Logger.Warnf("lab realtime handler init failed, /api/lab/realtime/* disabled: %s", err.Error())
 	}
+	labPprofHandler, err := handlers.NewLabPprofHandler()
+	if err != nil {
+		e.Logger.Warnf("lab pprof handler init failed, /api/lab/pprof/* disabled: %s", err.Error())
+	}
 
-	routes.SetupRoutes(e, tagHandler, schoolHandler, userHandler, authHandler, healthCheckHandler, counselingHandler, labS3Handler, labSQSHandler, labSNSHandler, labLambdaHandler, labCacheHandler, labRLSHandler, labPartitionHandler, labBulkHandler, labBreakerHandler, labRealtimeHandler)
+	// pprof は本番に晒したくないので env で明示的に opt-in する。
+	// docker-compose.lab.yml で LAB_PPROF_ENABLED=true を注入し、:6060 を host に publish する。
+	if os.Getenv("LAB_PPROF_ENABLED") == "true" {
+		go func() {
+			e.Logger.Info("lab pprof server listening on :6060 (/debug/pprof/)")
+			if err := http.ListenAndServe(":6060", nil); err != nil {
+				e.Logger.Warnf("pprof server stopped: %s", err.Error())
+			}
+		}()
+	}
+
+	routes.SetupRoutes(e, tagHandler, schoolHandler, userHandler, authHandler, healthCheckHandler, counselingHandler, labS3Handler, labSQSHandler, labSNSHandler, labLambdaHandler, labCacheHandler, labRLSHandler, labPartitionHandler, labBulkHandler, labBreakerHandler, labRealtimeHandler, labPprofHandler)
 
 	e.Start(":8080")
 }
