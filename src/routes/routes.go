@@ -60,6 +60,11 @@ func SetupRoutes(e *echo.Echo, tagHandler *handlers.TagHandler, schoolHandler *h
 	}
 	if labPprofHandler != nil {
 		lab.GET("/pprof/heavy", labPprofHandler.Heavy)
+		lab.POST("/pprof/heap-leak", labPprofHandler.HeapLeakStart)
+		lab.DELETE("/pprof/heap-leak", labPprofHandler.HeapLeakReset)
+		lab.POST("/pprof/goroutine-leak", labPprofHandler.GoroutineLeak)
+		lab.DELETE("/pprof/goroutine-leak", labPprofHandler.StopGoroutines)
+		lab.GET("/pprof/runtime", labPprofHandler.Runtime)
 	}
 	// Auth
 	// [TODO]/api/userは「/api/signup」として切り分けたい
